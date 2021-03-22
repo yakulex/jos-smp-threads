@@ -101,5 +101,21 @@ find_function(const char *const fname) {
 
     // LAB 3: Your code here:
 
+    if (!strcmp("sys_yield", fname)) return (uintptr_t)sys_yield;
+    if (!strcmp("sys_exit", fname)) return (uintptr_t)sys_exit;
+
+    struct Dwarf_Addrs addrs;
+    load_kernel_dwarf_info(&addrs);
+    uintptr_t offset = 0;
+
+    if (!address_by_fname(&addrs, fname, &offset) && offset) {
+     return offset;
+    }
+
+    if (!naive_address_by_fname(&addrs, fname, &offset)) {
+     return offset;
+    }
+
     return 0;
+
 }

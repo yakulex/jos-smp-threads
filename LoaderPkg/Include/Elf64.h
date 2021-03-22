@@ -8,6 +8,7 @@
 
 #define ELF_MAGIC 0x464C457FU   /* "\x7FELF" in little endian */
 
+//structure of executed file
 struct Elf {
   UINT32 e_magic;       // must equal ELF_MAGIC
   UINT8  e_elf[12];
