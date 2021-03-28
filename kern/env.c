@@ -90,7 +90,13 @@ env_init(void) {
     /* Set up envs array */
 
     // LAB 3: Your code here
-
+    env_free_list = NULL;
+    for (int i = NENV - 1; i >= 0; i--){
+     envs[i].env_status = ENV_FREE;
+     envs[i].env_link = env_free_list;
+     envs[i].env_id = 0;
+     env_free_list = &envs[i];
+    }
 }
 
 /* Allocates and initializes a new environment.
@@ -147,7 +153,10 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
     env->env_tf.tf_cs = GD_KT;
 
     // LAB 3: Your code here:
-    //static uintptr_t stack_top = 0x2000000;
+    static uintptr_t stack_top = 0x2000000;
+    env->env_tf.tf_rsp = stack_top;
+    stack_top -= 2 * PAGE_SIZE;
+    
 #else
     env->env_tf.tf_ds = GD_UD | 3;
     env->env_tf.tf_es = GD_UD | 3;
@@ -172,6 +181,41 @@ bind_functions(struct Env *env, uint8_t *binary, size_t size, uintptr_t image_st
     // LAB 3: Your code here:
 
     /* NOTE: find_function from kdebug.c should be used */
+
+    struct Elf *elf    = (struct Elf *)binary;
+    struct Secthdr *sh = (struct Secthdr *)(binary + elf->e_shoff);
+    const char *shstr  = (char *)binary + sh[elf->e_shstrndx].sh_offset;
+
+    // string table
+    size_t strtab = -1UL;
+    for (size_t i = 0; i < elf->e_shnum; i++) {
+     if (sh[i].sh_type == ELF_SHT_STRTAB && !strcmp(".strtab", shstr + sh[i].sh_name)) {
+       strtab = i;
+       break;
+     }
+    }
+    const char *strings = (char *)binary + sh[strtab].sh_offset;
+
+    for (size_t i = 0; i < elf->e_shnum; i++) {
+      if (sh[i].sh_type == ELF_SHT_SYMTAB) {
+        struct Elf64_Sym *syms = (struct Elf64_Sym *)(binary + sh[i].sh_offset);
+
+        size_t nsyms = sh[i].sh_size / sizeof(*syms);
+
+        for (size_t j = 0; j < nsyms; j++) {
+          if (ELF64_ST_BIND(syms[j].st_info) == STB_GLOBAL &&
+              ELF64_ST_TYPE(syms[j].st_info) == STT_OBJECT &&
+              syms[j].st_size == sizeof(void *)) {
+            const char *name = strings + syms[j].st_name;
+            uintptr_t addr = find_function(name);
+
+            if (addr) {
+              memcpy((void *)syms[j].st_value, &addr, sizeof(void *));
+            }
+          }
+        }
+      }
+    }
 
     return 0;
 }
@@ -219,7 +263,32 @@ bind_functions(struct Env *env, uint8_t *binary, size_t size, uintptr_t image_st
 static int
 load_icode(struct Env *env, uint8_t *binary, size_t size) {
     // LAB 3: Your code here
-
+    // /LoaderPkg/Include/Elf64.h
+    
+    struct Elf *elf = (struct Elf*)binary;
+    struct Proghdr *ph = (struct Proghdr*)(binary + elf->e_phoff);
+    if (elf->e_magic != ELF_MAGIC) {
+     cprintf("Unexpected ELF format\n");
+     return -E_INVALID_EXE;
+    }
+    for (size_t i = 0; i < elf->e_phnum; i++) {
+     if (ph[i].p_type == ELF_PROG_LOAD) {
+      size_t filesz = ph[i].p_filesz;
+      size_t memsz = ph[i].p_memsz;
+      size_t safety_filesize = memsz - filesz;
+      if (safety_filesize < 0) {
+       cprintf("ph->p_filesz > ph->p_memsz\n");
+       return -E_INVALID_EXE;
+      } else {
+       memcpy((void*)ph[i].p_va, binary + ph[i].p_offset, filesz);
+       memset((void*)ph[i].p_va + filesz, 0, safety_filesize);
+      }
+     }
+    }
+    env->env_tf.tf_rip = elf->e_entry;
+    uintptr_t image_start = 0;
+    uintptr_t image_end = 0;
+    bind_functions(env, binary, size, image_start, image_end);
     return 0;
 }
 
@@ -232,7 +301,11 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
 void
 env_create(uint8_t *binary, size_t size, enum EnvType type) {
     // LAB 3: Your code here
-
+    struct Env *new_env;
+    if (env_alloc(&new_env, 0, type) < 0) {
+     panic("No free environment\n");
+    }
+    load_icode(new_env, binary, size);
 }
 
 
@@ -261,7 +334,11 @@ env_destroy(struct Env *env) {
      * it traps to the kernel. */
 
     // LAB 3: Your code here
-
+    env->env_status = ENV_DYING;
+    if (env == curenv) {
+     env_free(env);
+     sched_yield();
+    }
 }
 
 #ifdef CONFIG_KSPACE
@@ -345,6 +422,17 @@ env_run(struct Env *env) {
     }
 
     // LAB 3: Your code here
+
+    if (curenv) {
+     if (curenv->env_status == ENV_RUNNING) {
+      curenv->env_status = ENV_RUNNABLE;
+     }
+     // what is about DYING?
+    }
+    curenv = env;
+    curenv->env_status = ENV_RUNNING;
+    curenv->env_runs += 1;
+    env_pop_tf(&curenv->env_tf);
 
     while(1) {}
 }

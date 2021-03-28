@@ -65,7 +65,10 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     * Hint: note that we need the address of `call` instruction, but rip holds
     * address of the next instruction, so we should substract 5 from it.
     * Hint: use line_for_address from kern/dwarf_lines.c */
-
+    int lineno_store = 0;
+    res = line_for_address(&addrs, addr - 5, line_offset, &lineno_store);
+    if (res < 0) goto error;
+    info->rip_line = lineno_store;
     // LAB 2: Your res here:
 
     /* Find function name corresponding to given address.
@@ -74,8 +77,15 @@ debuginfo_rip(uintptr_t addr, struct Ripdebuginfo *info) {
     * Hint: use function_by_info from kern/dwarf_lines.c
     * Hint: info->rip_fn_name can be not NULL-terminated,
     * string returned by function_by_info will always be */
-
+   
     // LAB 2: Your res here:
+    char *tmp_buf_function = NULL;
+    res = function_by_info(&addrs, addr - 5, offset, &tmp_buf_function, &info->rip_fn_addr);
+    if (res < 0) goto error;
+    strncpy(info->rip_fn_name, tmp_buf_function, sizeof(info->rip_fn_name));
+    info->rip_fn_namelen = strnlen(info->rip_fn_name, sizeof(info->rip_fn_name));
+
+    return 0;
 
 error:
     return res;
@@ -91,5 +101,21 @@ find_function(const char *const fname) {
 
     // LAB 3: Your code here:
 
+    if (!strcmp("sys_yield", fname)) return (uintptr_t)sys_yield;
+    if (!strcmp("sys_exit", fname)) return (uintptr_t)sys_exit;
+
+    struct Dwarf_Addrs addrs;
+    load_kernel_dwarf_info(&addrs);
+    uintptr_t offset = 0;
+
+    if (!address_by_fname(&addrs, fname, &offset) && offset) {
+     return offset;
+    }
+
+    if (!naive_address_by_fname(&addrs, fname, &offset)) {
+     return offset;
+    }
+
     return 0;
+
 }
