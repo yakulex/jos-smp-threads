@@ -204,7 +204,7 @@ bind_functions(struct Env *env, uint8_t *binary, size_t size, uintptr_t image_st
 
         for (size_t j = 0; j < nsyms; j++) {
           if (ELF64_ST_BIND(syms[j].st_info) == STB_GLOBAL &&
-              ELF64_ST_TYPE(syms[j].st_info) == STT_OBJECT &&
+              /*ELF64_ST_TYPE(syms[j].st_info) == STT_OBJECT &&*/
               syms[j].st_size == sizeof(void *)) {
             const char *name = strings + syms[j].st_name;
             uintptr_t addr = find_function(name);
@@ -363,7 +363,7 @@ csys_yield(struct Trapframe *tf) {
 
 _Noreturn void
 env_pop_tf(struct Trapframe *tf) {
-    asm volatile(
+     asm volatile(
             "movq %0, %%rsp\n"
             "movq 0(%%rsp), %%r15\n"
             "movq 8(%%rsp), %%r14\n"

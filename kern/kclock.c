@@ -22,12 +22,8 @@ cmos_read8(uint8_t reg) {
     // LAB 4: Your code here
     nmi_disable();
     uint8_t res = 0;
-    if (reg == RTC_AREG) res = inb(CMOS_DATA);
-    else { 
-     outb(CMOS_CMD, reg);
-     res = inb(CMOS_DATA);
-     outb(CMOS_CMD, RTC_AREG);
-    }
+    outb(CMOS_CMD, reg);
+    res = inb(CMOS_DATA);
     nmi_enable();
     return res;
 }
@@ -37,7 +33,6 @@ cmos_write8(uint8_t reg, uint8_t value) {
     // LAB 4: Your code here
     nmi_disable();
     outb(CMOS_CMD, reg);
-    //inb(IO_RTC_DATA);
     outb(CMOS_DATA, value);
     nmi_enable();
 }
@@ -63,10 +58,16 @@ rtc_timer_init(void) {
     // LAB 4: Your code here
     // (use cmos_read8/cmos_write8)
 
+    uint8_t res_a = 0;
     uint8_t res_b = 0;
     res_b = cmos_read8(RTC_BREG);
     res_b = res_b | RTC_PIE;
     cmos_write8(RTC_BREG, res_b);
+
+    res_a = cmos_read8(RTC_AREG);
+    res_a = res_a | RTC_500MS_RATE; //0-3 bits
+    cmos_write8(RTC_AREG, res_a);
+
 }
 
 uint8_t
@@ -75,5 +76,5 @@ rtc_check_status(void) {
     // (use cmos_read8)
     uint8_t status = 0;
     status = cmos_read8(RTC_CREG);
-    return 0;
+    return status;
 }

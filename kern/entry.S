@@ -27,6 +27,7 @@ entry:
 
 .global save_trapframe_trap
 save_trapframe_trap:
+    //cli
     popq save_trapframe_ret(%rip)
     popq saved_rip(%rip)
     popq saved_cs(%rip)
@@ -76,6 +77,7 @@ sys_yield:
 .globl sys_exit
 .type  sys_exit, @function
 sys_exit:
+    cli
     leaq bootstacktop(%rip), %rsp
     xor %ebp, %ebp //хранение адреса стекового кадра
     call csys_exit

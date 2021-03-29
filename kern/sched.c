@@ -33,17 +33,18 @@ sched_yield(void) {
      go = (go + 1) % NENV;
      if (envs[go].env_status == ENV_RUNNABLE || (envs[go].env_status == ENV_RUNNING &&
        go == start_save)) {
-      //cprintf("%d\n", go);
       env_run(&envs[go]);
      }
 
     } while (go != start_save);
 
-    cprintf("Halt\n");
+    cprintf("Halt\n"); 
 
     /* No runnable environments,
      * so just halt the cpu */
-    sched_halt();
+
+    sched_halt(); 
+
 }
 
 /* Halt this CPU when there is nothing to do. Wait until the
