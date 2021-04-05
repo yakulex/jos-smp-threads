@@ -206,7 +206,7 @@ _panic(const char *file, int line, const char *fmt, ...) {
 
 dead:
     /* Break into the kernel monitor */
-    for (;;) monitor(NULL);
+    for(;;) monitor(NULL);
 }
 
 /* Like panic, but don't */

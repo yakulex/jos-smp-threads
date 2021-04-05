@@ -23,6 +23,11 @@ int envid2env(envid_t envid, struct Env **env_store, bool checkperm);
 _Noreturn void env_run(struct Env *e);
 _Noreturn void env_pop_tf(struct Trapframe *tf);
 
+static inline int
+curenv_getid(void) {
+  return curenv->env_id;
+}
+
 #ifdef CONFIG_KSPACE
 extern void sys_exit(void);
 extern void sys_yield(void);
