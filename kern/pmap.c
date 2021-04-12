@@ -467,21 +467,32 @@ dump_virtual_tree(struct Page *node, int class) {
     // LAB 7: Your code here
 }
 
+struct Page *
+find_page(uintptr_t addr){
+    struct Page *node = &root;
+    while (node->left && node->right) {
+        bool right = addr & CLASS_SIZE(node->class - 1);
+        node = right ? node->right : node->left;
+    }
+    return node;
+}
+
 void
 dump_memory_lists(void) {
     // LAB 6: Your code here
-
-    for (int i = 0; i < MAX_CLASS; i++){
-      if (&free_classes[i]) {
-        cprintf("class: %d\n", i);
-        cprintf("----------------\n");
-        struct List *list_;
-        for (list_ = free_classes[i].next; list_ != &free_classes[i]; list_ = list_->next){
-          struct Page *node = (struct Page *)(list_);
-          cprintf("address: %p\n", (void *)page2pa(node));
+    uintptr_t addr = 0;
+    struct Page * page = find_page(addr);
+    struct Page * next_page = page;
+    while(addr < max_memory_map_addr){
+        addr = addr + CLASS_SIZE(next_page->class);
+        struct Page * next_page = find_page(addr);
+        if (page->state != next_page->state || addr >= max_memory_map_addr){
+            if (page->state == RESERVED_NODE)
+                cprintf("0x%08lX - 0x%08lX allocated\n", page2pa(page), page2pa(next_page) - 1);
+            else
+                cprintf("0x%08lX - 0x%08lX free\n", page2pa(page), page2pa(next_page) - 1);
+            page = next_page;
         }
-	cprintf("----------------\n");
-      }
     }
 }
 
