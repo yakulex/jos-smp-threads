@@ -485,7 +485,7 @@ dump_memory_lists(void) {
     struct Page * next_page = page;
     while(addr < max_memory_map_addr){
         addr = addr + CLASS_SIZE(next_page->class);
-        struct Page * next_page = find_page(addr);
+        next_page = find_page(addr);
         if (page->state != next_page->state || addr >= max_memory_map_addr){
             if (page->state == RESERVED_NODE)
                 cprintf("0x%08lX - 0x%08lX allocated\n", page2pa(page), page2pa(next_page) - 1);
