@@ -1,0 +1,46 @@
+obj/kern/kernel.asm:4458:;     map_addr_early_boot((uintptr_t)uefi_lp->MemoryMap, (uintptr_t)uefi_lp->MemoryMap, uefi_lp->MemoryMapSize);
+obj/kern/kernel.asm:4464:;     map_addr_early_boot(FRAMEBUFFER, uefi_lp->FrameBufferBase, uefi_lp->FrameBufferSize);
+obj/kern/kernel.asm:9108:;     if (uefi_lp && uefi_lp->MemoryMap) {
+obj/kern/kernel.asm:9117:;         EFI_MEMORY_DESCRIPTOR *end = (void *)(uefi_lp->MemoryMap + uefi_lp->MemoryMapSize);
+obj/kern/kernel.asm:9139:;             start = (void *)((uint8_t *)start + uefi_lp->MemoryMapDescriptorSize);
+obj/kern/kernel.asm:12155:;     if (!uefi_lp->ACPIRoot) {
+obj/kern/kernel.asm:12161:;     RSDP * krsdp = mmio_map_region(uefi_lp->ACPIRoot, sizeof(RSDP));
+obj/kern/kernel.asm:12706:;     addrs->aranges_begin = (uint8_t *)(uefi_lp->DebugArangesStart);
+obj/kern/kernel.asm:12711:;     addrs->aranges_end = (uint8_t *)(uefi_lp->DebugArangesEnd);
+obj/kern/kernel.asm:12714:;     addrs->abbrev_begin = (uint8_t *)(uefi_lp->DebugAbbrevStart);
+obj/kern/kernel.asm:12717:;     addrs->abbrev_end = (uint8_t *)(uefi_lp->DebugAbbrevEnd);
+obj/kern/kernel.asm:12721:;     addrs->info_begin = (uint8_t *)(uefi_lp->DebugInfoStart);
+obj/kern/kernel.asm:12724:;     addrs->info_end = (uint8_t *)(uefi_lp->DebugInfoEnd);
+obj/kern/kernel.asm:12727:;     addrs->line_begin = (uint8_t *)(uefi_lp->DebugLineStart);
+obj/kern/kernel.asm:12730:;     addrs->line_end = (uint8_t *)(uefi_lp->DebugLineEnd);
+obj/kern/kernel.asm:12733:;     addrs->str_begin = (uint8_t *)(uefi_lp->DebugStrStart);
+obj/kern/kernel.asm:12736:;     addrs->str_end = (uint8_t *)(uefi_lp->DebugStrEnd);
+obj/kern/kernel.asm:12739:;     addrs->pubnames_begin = (uint8_t *)(uefi_lp->DebugPubnamesStart);
+obj/kern/kernel.asm:12742:;     addrs->pubnames_end = (uint8_t *)(uefi_lp->DebugPubnamesEnd);
+obj/kern/kernel.asm:12745:;     addrs->pubtypes_begin = (uint8_t *)(uefi_lp->DebugPubtypesStart);
+obj/kern/kernel.asm:12748:;     addrs->pubtypes_end = (uint8_t *)(uefi_lp->DebugPubtypesEnd);
+kern/init.c:108:    map_addr_early_boot((uintptr_t)uefi_lp->MemoryMap, (uintptr_t)uefi_lp->MemoryMap, uefi_lp->MemoryMapSize);
+kern/init.c:116:    map_shadow_early_boot(SHADOW_ADDR(uefi_lp->MemoryMap), uefi_lp->MemoryMapSize, zero_page_raw);
+kern/init.c:124:    map_addr_early_boot(FRAMEBUFFER, uefi_lp->FrameBufferBase, uefi_lp->FrameBufferSize);
+kern/kdebug.c:15:    addrs->aranges_begin = (uint8_t *)(uefi_lp->DebugArangesStart);
+kern/kdebug.c:16:    addrs->aranges_end = (uint8_t *)(uefi_lp->DebugArangesEnd);
+kern/kdebug.c:17:    addrs->abbrev_begin = (uint8_t *)(uefi_lp->DebugAbbrevStart);
+kern/kdebug.c:18:    addrs->abbrev_end = (uint8_t *)(uefi_lp->DebugAbbrevEnd);
+kern/kdebug.c:19:    addrs->info_begin = (uint8_t *)(uefi_lp->DebugInfoStart);
+kern/kdebug.c:20:    addrs->info_end = (uint8_t *)(uefi_lp->DebugInfoEnd);
+kern/kdebug.c:21:    addrs->line_begin = (uint8_t *)(uefi_lp->DebugLineStart);
+kern/kdebug.c:22:    addrs->line_end = (uint8_t *)(uefi_lp->DebugLineEnd);
+kern/kdebug.c:23:    addrs->str_begin = (uint8_t *)(uefi_lp->DebugStrStart);
+kern/kdebug.c:24:    addrs->str_end = (uint8_t *)(uefi_lp->DebugStrEnd);
+kern/kdebug.c:25:    addrs->pubnames_begin = (uint8_t *)(uefi_lp->DebugPubnamesStart);
+kern/kdebug.c:26:    addrs->pubnames_end = (uint8_t *)(uefi_lp->DebugPubnamesEnd);
+kern/kdebug.c:27:    addrs->pubtypes_begin = (uint8_t *)(uefi_lp->DebugPubtypesStart);
+kern/kdebug.c:28:    addrs->pubtypes_end = (uint8_t *)(uefi_lp->DebugPubtypesEnd);
+kern/timer.c:87:     * HINT: RSDP address is stored in uefi_lp->ACPIRoot
+kern/timer.c:100:    if (!uefi_lp->ACPIRoot) {
+kern/timer.c:103:    RSDP * krsdp = mmio_map_region(uefi_lp->ACPIRoot, sizeof(RSDP));
+kern/pmap.c:550:    if (uefi_lp && uefi_lp->MemoryMap) {
+kern/pmap.c:551:        EFI_MEMORY_DESCRIPTOR *start = (void *)uefi_lp->MemoryMap;
+kern/pmap.c:552:        EFI_MEMORY_DESCRIPTOR *end = (void *)(uefi_lp->MemoryMap + uefi_lp->MemoryMapSize);
+kern/pmap.c:575:            start = (void *)((uint8_t *)start + uefi_lp->MemoryMapDescriptorSize);
+kern/pmap.c:615:    metaheaptop = KERN_HEAP_START + ROUNDUP(uefi_lp->FrameBuf
