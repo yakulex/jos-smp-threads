@@ -121,6 +121,7 @@ early_boot_pml4_init(void) {
 #endif
 
 #if LAB <= 6
+    cprintf("0x%08lX\n", uefi_lp->FrameBufferBase);
     map_addr_early_boot(FRAMEBUFFER, uefi_lp->FrameBufferBase, uefi_lp->FrameBufferSize);
 #endif
 }
