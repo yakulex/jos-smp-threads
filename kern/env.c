@@ -266,31 +266,71 @@ static int
 load_icode(struct Env *env, uint8_t *binary, size_t size) {
     // LAB 3: Your code here
     // /LoaderPkg/Include/Elf64.h
-    
+    cprintf("lox\n");
     struct Elf *elf = (struct Elf*)binary;
     struct Proghdr *ph = (struct Proghdr*)(binary + elf->e_phoff);
     if (elf->e_magic != ELF_MAGIC) {
      cprintf("Unexpected ELF format\n");
      return -E_INVALID_EXE;
     }
+    cprintf("lox\n");
     for (size_t i = 0; i < elf->e_phnum; i++) {
      if (ph[i].p_type == ELF_PROG_LOAD) {
+      void *src = binary + ph[i].p_offset;
+      void *dst = (void *)ph[i].p_va;
       size_t filesz = ph[i].p_filesz;
       size_t memsz = ph[i].p_memsz;
       size_t safety_filesize = memsz - filesz;
+      size_t filesz2 = MIN(ph[i].p_filesz, memsz);
       if (safety_filesize < 0) {
        cprintf("ph->p_filesz > ph->p_memsz\n");
        return -E_INVALID_EXE;
       } else {
-       memcpy((void*)ph[i].p_va, binary + ph[i].p_offset, filesz);
-       memset((void*)ph[i].p_va + filesz, 0, safety_filesize);
+       cprintf("lox1\n");
+       cprintf("0x%08lX\n", ph[i].p_va);
+       cprintf("%p\n", src);
+       cprintf("%lu\n", filesz2);
+       memcpy(dst, src, filesz2);
+       cprintf("lox2.1\n");
+       memset((void*)ph[i].p_va + filesz2, 0, safety_filesize);
+       cprintf("lox2.2\n");
       }
      }
     }
+    cprintf("lox2.3\n");
     env->env_tf.tf_rip = elf->e_entry;
     uintptr_t image_start = 0;
     uintptr_t image_end = 0;
     bind_functions(env, binary, size, image_start, image_end);
+    return 0;
+    
+    /*struct Elf *elf = (struct Elf *)(binary);
+    if (elf->e_magic != ELF_MAGIC) {
+        return -E_INVALID_EXE;
+    }
+    struct Proghdr *current_header = (struct Proghdr *)(binary + elf->e_phoff);
+    uint16_t phnum = elf->e_phnum;
+    while (phnum--) {
+        if (current_header->p_type != ELF_PROG_LOAD) {
+            ++current_header;
+            continue;
+        }
+        cprintf("lox2.1\n");
+        memset((void *)current_header->p_va, 0, current_header->p_memsz);
+        cprintf("lox2.2\n");
+        void *start_cpy = (void *)(binary + current_header->p_offset);
+        memcpy((void *)current_header->p_va, start_cpy, current_header->p_filesz);
+        cprintf("lox2.3\n");
+        ++current_header;
+    }
+    cprintf("lox2.4\n");
+
+    memset((void *)(env->env_tf.tf_rsp - PAGE_SIZE), 0, PAGE_SIZE);
+    cprintf("lox2.5\n");
+    env->env_tf.tf_rip = elf->e_entry;
+
+    bind_functions(env, binary, size, 0, 0);*/
+
     return 0;
 }
 
@@ -307,6 +347,7 @@ env_create(uint8_t *binary, size_t size, enum EnvType type) {
     if (env_alloc(&new_env, 0, type) < 0) {
      panic("No free environment\n");
     }
+
     load_icode(new_env, binary, size);
 }
 

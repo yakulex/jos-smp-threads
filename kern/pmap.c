@@ -754,8 +754,9 @@ memcpy_page(struct AddressSpace *dst, uintptr_t va, struct Page *page) {
     struct Page* virtual_page = page_lookup_virtual(dst->root, va, page->class, LOOKUP_ALLOC); // ищется виртуальная страница и выделаяется по заданному адресу, там же 
     // выделяется физическая страница
     set_wp(false);
-    nosan_memcpy(KADDR(page2pa(page)), KADDR(page2pa(virtual_page->phy)), CLASS_SIZE(page->class)); // копируем контент физ  страницу page в выделенную page_lookup_virtual 
+    //nosan_memcpy(KADDR(page2pa(page)), KADDR(page2pa(virtual_page->phy)), CLASS_SIZE(page->class)); // копируем контент физ  страницу page в выделенную page_lookup_virtual 
     //физ страницу соотв. виртуальной странице
+    nosan_memcpy(KADDR(page2pa(virtual_page->phy)), KADDR(page2pa(page)), CLASS_SIZE(page->class));
     set_wp(true);
     switch_address_space(old_current);
 }
@@ -1731,7 +1732,7 @@ init_memory(void) {
     // NOTE: You need to check if map_physical_region returned 0 everywhere! (and panic otherwise)
     // Map [0, max_memory_map_addr] to [KERN_BASE_ADDR, KERN_BASE_ADDR + max_memory_map_addr] as RW- + ALLOC_WEAK
 
-    if (map_physical_region(&kspace, KERN_BASE_ADDR, 0, max_memory_map_addr, PROT_R | PROT_W | ALLOC_WEAK) < 0) {
+    if (map_physical_region(&kspace, KERN_BASE_ADDR, 0, max_memory_map_addr, PROT_R | PROT_W | ALLOC_WEAK | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %zd", (void *)0, max_memory_map_addr);
     }
 
@@ -1743,8 +1744,8 @@ init_memory(void) {
     /* ...and make kernel .text section executable: */
 
     // LAB 7: Your code here
-    // Map [PADDR(__text_start);PADDR(__text_end)] to [__text_start, __text_end] as RW- + PROT_X
-    if (map_physical_region(&kspace, (uintptr_t)__text_start, PADDR(__text_start), __text_end - __text_start, PROT_R | PROT_X) < 0) {
+    // Map [PADDR(__text_start);PADDR(__text_end)] to [__text_start, __text_end] as R-X
+    if (map_physical_region(&kspace, (uintptr_t)__text_start, PADDR(__text_start), (size_t)(__text_end - __text_start), PROT_R | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %zd", (void *)PADDR(__text_start), PADDR(__text_end) - PADDR(__text_start));
     }
 
@@ -1754,11 +1755,11 @@ init_memory(void) {
     // Map [PADDR(bootstack), PADDR(bootstack) + KERN_STACK_SIZE] to [KERN_STACK_TOP - KERN_STACK_SIZE, KERN_STACK_TOP] as RW-
     // Map [PADDR(pfstack), PADDR(pfstack) + KERN_PF_STACK_SIZE] to [KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE, KERN_PF_STACK_TOP] as RW-
 
-    if (map_physical_region(&kspace, KERN_STACK_TOP - KERN_STACK_SIZE, PADDR(bootstack), KERN_STACK_SIZE, PROT_R | PROT_W) < 0) {
+    if (map_physical_region(&kspace, KERN_STACK_TOP - KERN_STACK_SIZE, PADDR(bootstack), KERN_STACK_SIZE, PROT_R | PROT_W | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %lld", (void *)PADDR(bootstack), KERN_STACK_SIZE);
     }
 
-    if (map_physical_region(&kspace, KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE, PADDR(pfstack), KERN_PF_STACK_SIZE, PROT_R | PROT_W) < 0) {
+    if (map_physical_region(&kspace, KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE, PADDR(pfstack), KERN_PF_STACK_SIZE, PROT_R | PROT_W | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %lld", (void *)PADDR(pfstack), KERN_PF_STACK_SIZE);
     }
 
@@ -1773,7 +1774,7 @@ init_memory(void) {
             // LAB 7: Your code here
             // Map [mstart->PhysicalStart, mstart->PhysicalStart+mstart->NumberOfPages*PAGE_SIZE] to
             //     [mstart->VirtualStart, mstart->VirtualStart+mstart->NumberOfPages*PAGE_SIZE] as RW-
-            if (map_physical_region(&kspace, mstart->VirtualStart, mstart->PhysicalStart, mstart->NumberOfPages*PAGE_SIZE, PROT_R | PROT_W) < 0) {
+            if (map_physical_region(&kspace, mstart->VirtualStart, mstart->PhysicalStart, mstart->NumberOfPages*PAGE_SIZE, PROT_R | PROT_W | PROT_X) < 0) {
                 panic("Cannot map physical region at %p of size %llu", (void *)mstart->PhysicalStart, mstart->NumberOfPages * PAGE_SIZE);
             }
         }
@@ -1844,20 +1845,20 @@ init_memory(void) {
 
     //ВОТ ЭТОТ МАППИНГ НЕ ПАШЕТ
     uintptr_t p_start_map = 0, _size = 0;
-    dump_memory_lists();
+    cprintf("some1");
     
     p_start_map = uefi_lp->FrameBufferBase;
     cprintf("0x%08lX\n", p_start_map);
     _size = uefi_lp->FrameBufferSize;
     cprintf("0x%08lX\n", _size);
-    if (map_physical_region(&kspace, FRAMEBUFFER, p_start_map, _size, PROT_R | PROT_W | PROT_WC) < 0) {
+    if (map_physical_region(&kspace, FRAMEBUFFER, p_start_map, _size, PROT_R | PROT_W | PROT_WC | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %zd", (void *)p_start_map, _size);
     }
-    
+    cprintf("some2");
 
     p_start_map = 0;
     _size = MIN(MAX_LOW_ADDR_KERN_SIZE, max_memory_map_addr);
-    if (map_physical_region(&kspace, X86ADDR(KERN_BASE_ADDR), p_start_map, _size, PROT_R | PROT_W | ALLOC_WEAK) < 0) {
+    if (map_physical_region(&kspace, X86ADDR(KERN_BASE_ADDR), p_start_map, _size, PROT_R | PROT_W | ALLOC_WEAK | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %zd", (void *)p_start_map, _size);
     }
 
@@ -1870,14 +1871,14 @@ init_memory(void) {
 
     p_start_map = PADDR(bootstack);
     _size = KERN_STACK_SIZE;
-    if (map_physical_region(&kspace, X86ADDR(KERN_STACK_TOP - KERN_STACK_SIZE), p_start_map, _size, PROT_R | PROT_W) < 0) {
+    if (map_physical_region(&kspace, X86ADDR(KERN_STACK_TOP - KERN_STACK_SIZE), p_start_map, _size, PROT_R | PROT_W | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %zd", (void *)p_start_map, _size);
     }
     
 
     p_start_map = PADDR(pfstack);
     _size = KERN_PF_STACK_SIZE;
-    if (map_physical_region(&kspace, X86ADDR(KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE), p_start_map, _size, PROT_R | PROT_W) < 0) {
+    if (map_physical_region(&kspace, X86ADDR(KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE), p_start_map, _size, PROT_R | PROT_W | PROT_X) < 0) {
         panic("Cannot map physical region at %p of size %zd", (void *)p_start_map, _size);
     }  
 
