@@ -78,7 +78,7 @@ _alltraps:
   jmp .
 
 TRAPHANDLER_NOEC(clock_thdlr, IRQ_OFFSET + IRQ_CLOCK)
-// LAB 8 code
+
 TRAPHANDLER_NOEC(divide_thdlr, T_DIVIDE)
 TRAPHANDLER_NOEC(debug_thdlr, T_DEBUG)
 TRAPHANDLER_NOEC(nmi_thdlr, T_NMI)

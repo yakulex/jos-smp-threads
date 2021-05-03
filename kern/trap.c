@@ -198,6 +198,15 @@ trap_init_percpu(void) {
 }
 
 void
+clock_idt_init(void) {
+  extern void (*clock_thdlr)(void);
+  // init idt structure
+  idt[IRQ_OFFSET + IRQ_TIMER] = GATE(0, GD_KT, (uintptr_t)(&clock_thdlr), 0);
+  idt[IRQ_OFFSET + IRQ_CLOCK] = GATE(0, GD_KT, (uintptr_t)(&clock_thdlr), 0);
+  lidt(&idt_pd);
+}
+
+void
 print_trapframe(struct Trapframe *tf) {
     cprintf("TRAP frame at %p\n", tf);
     print_regs(&tf->tf_regs);

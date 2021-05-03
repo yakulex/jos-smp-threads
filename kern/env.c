@@ -94,10 +94,16 @@ env_init(void) {
      * (don't forget about rounding) */
     // LAB 8: Your code here
 
+    envs = (struct Env *)kzalloc_region(sizeof(* envs) * NENV);
+    memset(envs, 0, sizeof(*envs) * NENV);
+    cprintf("envs - %p\n", (void*)envs);
+
     /* Map envs to UENVS read-only,
      * but user-accessible (with PROT_USER_ set) */
     // LAB 8: Your code here
 
+    if (map_region(&kspace, UENVS, NULL, PADDR(envs), UENVS_SIZE, PROT_R | PROT_USER_))
+        panic("Cannot map physical region at %p of size %lld", (void *)PADDR(envs), UENVS_SIZE);
     /* Set up envs array */
 
     // LAB 3: Your code here
@@ -294,6 +300,9 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
      cprintf("Unexpected ELF format\n");
      return -E_INVALID_EXE;
     }
+
+    lcr3(PADDR(env->address_space.pml4));
+
     cprintf("lox\n");
     for (size_t i = 0; i < elf->e_phnum; i++) {
      if (ph[i].p_type == ELF_PROG_LOAD) {
@@ -303,6 +312,9 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
       size_t memsz = ph[i].p_memsz;
       size_t safety_filesize = memsz - filesz;
       size_t filesz2 = MIN(ph[i].p_filesz, memsz);
+
+      map_region(&env->address_space, (uintptr_t)dst, NULL, 0, memsz, PROT_R | PROT_W); //maybe + | PROT_USER_
+
       if (safety_filesize < 0) {
        cprintf("ph->p_filesz > ph->p_memsz\n");
        return -E_INVALID_EXE;
@@ -391,6 +403,11 @@ env_destroy(struct Env *env) {
     }
 
     // LAB 8: Your code here (set in_page_fault = 0)
+    if (env->env_tf.tf_trapno == T_PGFLT) {
+        assert(current_space);
+        assert(!in_page_fault);
+        in_page_fault = 0;
+    }
 }
 
 #ifdef CONFIG_KSPACE
@@ -486,6 +503,7 @@ env_run(struct Env *env) {
     curenv = env;
     curenv->env_status = ENV_RUNNING;
     curenv->env_runs += 1;
+    switch_address_space(&(curenv->address_space));
     env_pop_tf(&curenv->env_tf);
 
     while(1) {}

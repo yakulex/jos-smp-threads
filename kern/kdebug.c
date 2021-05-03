@@ -140,9 +140,11 @@ find_function(const char *const fname) {
      * in assembly. */
 
     // LAB 3: Your code here:
+    #ifdef CONFIG_KSPACE
 
-    //if (!strcmp("sys_yield", fname)) return (uintptr_t)sys_yield;
-    //if (!strcmp("sys_exit", fname)) return (uintptr_t)sys_exit;
+    if (!strcmp("sys_yield", fname)) return (uintptr_t)sys_yield;
+    if (!strcmp("sys_exit", fname)) return (uintptr_t)sys_exit;
+    #endif
 
     struct Dwarf_Addrs addrs;
     load_kernel_dwarf_info(&addrs);

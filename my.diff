@@ -1,0 +1,158 @@
+diff --git a/kern/env.c b/kern/env.c
+index 61cee72..0564b2b 100644
+--- a/kern/env.c
++++ b/kern/env.c
+@@ -94,10 +94,16 @@ env_init(void) {
+      * (don't forget about rounding) */
+     // LAB 8: Your code here
+ 
++    envs = (struct Env *)kzalloc_region(sizeof(* envs) * NENV);
++    memset(envs, 0, sizeof(*envs) * NENV);
++    cprintf("envs - %p\n", (void*)envs);
++
+     /* Map envs to UENVS read-only,
+      * but user-accessible (with PROT_USER_ set) */
+     // LAB 8: Your code here
+ 
++    if (map_region(&kspace, UENVS, NULL, PADDR(envs), UENVS_SIZE, PROT_R | PROT_USER_))
++        panic("Cannot map physical region at %p of size %lld", (void *)PADDR(envs), UENVS_SIZE);
+     /* Set up envs array */
+ 
+     // LAB 3: Your code here
+@@ -294,6 +300,9 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
+      cprintf("Unexpected ELF format\n");
+      return -E_INVALID_EXE;
+     }
++
++    lcr3(PADDR(env->address_space.pml4));
++
+     cprintf("lox\n");
+     for (size_t i = 0; i < elf->e_phnum; i++) {
+      if (ph[i].p_type == ELF_PROG_LOAD) {
+@@ -303,6 +312,9 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
+       size_t memsz = ph[i].p_memsz;
+       size_t safety_filesize = memsz - filesz;
+       size_t filesz2 = MIN(ph[i].p_filesz, memsz);
++
++      map_region(&env->address_space, (uintptr_t)dst, NULL, 0, memsz, PROT_R | PROT_W); //maybe + | PROT_USER_
++
+       if (safety_filesize < 0) {
+        cprintf("ph->p_filesz > ph->p_memsz\n");
+        return -E_INVALID_EXE;
+@@ -391,6 +403,11 @@ env_destroy(struct Env *env) {
+     }
+ 
+     // LAB 8: Your code here (set in_page_fault = 0)
++    if (env->env_tf.tf_trapno == T_PGFLT) {
++        assert(current_space);
++        assert(!in_page_fault);
++        in_page_fault = 0;
++    }
+ }
+ 
+ #ifdef CONFIG_KSPACE
+@@ -486,6 +503,7 @@ env_run(struct Env *env) {
+     curenv = env;
+     curenv->env_status = ENV_RUNNING;
+     curenv->env_runs += 1;
++    switch_address_space(&(curenv->address_space));
+     env_pop_tf(&curenv->env_tf);
+ 
+     while(1) {}
+diff --git a/kern/init.c b/kern/init.c
+index fc441fa..abe7f44 100644
+--- a/kern/init.c
++++ b/kern/init.c
+@@ -157,6 +157,7 @@ i386_init(void) {
+ 
+     /* Choose the timer used for scheduling: hpet or pit */
+     timers_schedule("hpet0");
++    clock_idt_init();
+ 
+ #ifdef CONFIG_KSPACE
+     /* Touch all you want */
+diff --git a/kern/kdebug.c b/kern/kdebug.c
+index 8d1ebe9..e22662e 100644
+--- a/kern/kdebug.c
++++ b/kern/kdebug.c
+@@ -140,9 +140,11 @@ find_function(const char *const fname) {
+      * in assembly. */
+ 
+     // LAB 3: Your code here:
++    #ifdef CONFIG_KSPACE
+ 
+-    //if (!strcmp("sys_yield", fname)) return (uintptr_t)sys_yield;
+-    //if (!strcmp("sys_exit", fname)) return (uintptr_t)sys_exit;
++    if (!strcmp("sys_yield", fname)) return (uintptr_t)sys_yield;
++    if (!strcmp("sys_exit", fname)) return (uintptr_t)sys_exit;
++    #endif
+ 
+     struct Dwarf_Addrs addrs;
+     load_kernel_dwarf_info(&addrs);
+diff --git a/kern/pmap.c b/kern/pmap.c
+index 5653866..4d1e103 100644
+--- a/kern/pmap.c
++++ b/kern/pmap.c
+@@ -1931,7 +1931,28 @@ static uintptr_t user_mem_check_addr;
+ int
+ user_mem_check(struct Env *env, const void *va, size_t len, int perm) {
+     // LAB 8: Your code here
+-    return -E_FAULT;
++    //perm = perm | PTE_P;
++
++    const void *end = va + len;
++    const void *va_b = va;
++    va = (void*) ROUNDDOWN(va, PAGE_SIZE);
++    struct Page *root = env->address_space.root;
++    while (va < end)
++    {
++        struct Page* smallest_page = page_lookup_virtual(root, (uintptr_t)va, 0, 0);
++        if (!smallest_page->phy || (smallest_page->state & perm) != perm ){
++          user_mem_check_addr = (uintptr_t) MAX(va,va_b);
++          return -E_FAULT;
++        }
++    va += PAGE_SIZE;
++    }
++
++    if ((uintptr_t) end > MAX_USER_READABLE){
++        user_mem_check_addr = MAX(MAX_USER_READABLE, (uintptr_t)va_b);
++        return -E_FAULT;
++    }
++
++  return 0;
+ }
+ 
+ void
+diff --git a/kern/trap.c b/kern/trap.c
+index bfa41f5..3256133 100644
+--- a/kern/trap.c
++++ b/kern/trap.c
+@@ -197,6 +197,15 @@ trap_init_percpu(void) {
+     lidt(&idt_pd);
+ }
+ 
++void
++clock_idt_init(void) {
++  extern void (*clock_thdlr)(void);
++  // init idt structure
++  idt[IRQ_OFFSET + IRQ_TIMER] = GATE(0, GD_KT, (uintptr_t)(&clock_thdlr), 0);
++  idt[IRQ_OFFSET + IRQ_CLOCK] = GATE(0, GD_KT, (uintptr_t)(&clock_thdlr), 0);
++  lidt(&idt_pd);
++}
++
+ void
+ print_trapframe(struct Trapframe *tf) {
+     cprintf("TRAP frame at %p\n", tf);
+diff --git a/kern/trapentry.S b/kern/trapentry.S
+index a1dd84b..587ce58 100644
+--- a/kern/trapentry.S
++++ b/kern/trapentry.S
+@@ -78,7 +78,7 @@ _alltraps:
+   jmp .
+ 
+ TRAPHANDLER_NOEC(clock_thdlr, IRQ_OFFSET + IRQ_CLOCK)
+-// LAB 8 code
++
+ TRAPHANDLER_NOEC(divide_thdlr, T_DIVIDE)
+ TRAPHANDLER_NOEC(debug_thdlr, T_DEBUG)
+ TRAPHANDLER_NOEC(nmi_thdlr, T_NMI)
