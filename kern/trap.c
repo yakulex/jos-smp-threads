@@ -404,7 +404,7 @@ page_fault_handler(struct Trapframe *tf) {
     // LAB 9: Your code here:
 
     uintptr_t fault_va = rcr2();
-    //void)cr2;
+    //(void)fault_va;
 
     /* Handle kernel-mode page faults. */
     if (!(tf->tf_err & FEC_U)) {
@@ -452,7 +452,7 @@ page_fault_handler(struct Trapframe *tf) {
      * causing pagefault during another pagefault */
 
     
-    // LAB 9: Your code here:
+    //LAB 9: Your code here:
 
     force_alloc_page(current_space, fault_va, MAX_ALLOCATION_CLASS);
 
@@ -461,17 +461,17 @@ page_fault_handler(struct Trapframe *tf) {
 
     uxrsp = USER_STACK_TOP;
     if (tf->tf_rsp < USER_EXCEPTION_STACK_TOP && tf->tf_rsp >= USER_EXCEPTION_STACK_TOP - PAGE_SIZE) {
-        uxrsp = tf->tf_rsp - sizeof(uintptr_t); // maybe uint32_t
+        uxrsp = tf->tf_rsp - sizeof(uint32_t); // maybe uint32_t
     }
     uxrsp -= sizeof(struct UTrapframe);
     utf = (struct UTrapframe*) uxrsp;
 
     /* Assert existance of exception stack using user mem assert */
     // LAB 9: Your code here:
-
+    if (!curenv->env_pgfault_upcall) cprintf("AAAAAAA\n");
     user_mem_assert(curenv, utf, sizeof (struct UTrapframe), PTE_W);
 
-    /* Build local copy of UTrapframe */
+     //Build local copy of UTrapframe 
     // LAB 9: Your code here:
 
     utf->utf_fault_va = fault_va;
@@ -484,13 +484,14 @@ page_fault_handler(struct Trapframe *tf) {
     /* And then copy it userspace (nosan_memcpy) */
     // LAB 9: Your code here:
 
-    //nosan_memcpy()
+    //nosan_memcpy() -- need to write!!!!!!!!!!!!!!!
 
     tf->tf_rsp = uxrsp;
     tf->tf_rip = (uintptr_t)curenv->env_pgfault_upcall;
 
     /* Reset in_page_fault flag */
     // LAB 9: Your code here:
+
     in_page_fault = 0;
 
     /* Rerun current environment */

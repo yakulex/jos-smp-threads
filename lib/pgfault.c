@@ -39,14 +39,15 @@ _handle_vectored_pagefault(struct UTrapframe *utf) {
 int
 add_pgfault_handler(pf_handler_t handler) {
     int res = 0;
+    envid_t envid = sys_getenvid();
     if (!_pfhandler_inititiallized) {
         /* First time through! */
         // LAB 9: Your code here:
-        envid_t envid = sys_getenvid();
+        
         sys_alloc_region(envid, (void*)(USER_EXCEPTION_STACK_TOP - PAGE_SIZE), PAGE_SIZE, PTE_W);
         res = sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
-        goto end;
         _pfhandler_inititiallized = 1;
+        goto end;
     }
 
     for (size_t i = 0; i < _pfhandler_off; i++)
@@ -56,6 +57,7 @@ add_pgfault_handler(pf_handler_t handler) {
         res = -E_INVAL;
     else
         _pfhandler_vec[_pfhandler_off++] = handler;
+    //res = sys_env_set_pgfault_upcall(envid, _pgfault_upcall);
 
 end:
     if (res < 0) panic("set_pgfault_handler: %i", res);

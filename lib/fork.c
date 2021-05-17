@@ -33,9 +33,9 @@ fork(void) {
         thisenv = &envs[ENVX(sys_getenvid())];
         return 0;
     }
-    ;
+    
 
-    if ((r = sys_map_region(thisenv->env_id, NULL, envid, NULL, MAX_USER_ADDRESS, PROT_ALL | PROT_LAZY | PROT_COMBINE)) < 0)
+    if ((r = sys_map_region(sys_getenvid(), NULL, envid, NULL, MAX_USER_ADDRESS, PROT_ALL | PROT_LAZY | PROT_COMBINE)) < 0)
         panic("map region fault: %i", r);
 
     if ((r = sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall)) < 0)

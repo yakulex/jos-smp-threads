@@ -248,10 +248,10 @@ sys_map_region(envid_t srcenvid, uintptr_t srcva,
         cprintf("MAX_USER_ADDRESS\n");
         return -E_INVAL;
     }
-    if (perm & ~PROT_ALL) {
-        cprintf("flag1\n");
-        return -E_INVAL;
-    }
+    // if (perm & ~(PROT_W | )) {
+    //     cprintf("flag1\n");
+    //     return -E_INVAL;
+    // }
     // don't know how -- -E_INVAL is srcva is not mapped in srcenvid's address space.
     // how to prove srcva is read-only in srcenvid's address space ??
     // if ((perm & PROT_W)) {
