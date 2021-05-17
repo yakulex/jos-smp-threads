@@ -48,13 +48,11 @@ static struct Env *env_free_list;
 int
 envid2env(envid_t envid, struct Env **env_store, bool need_check_perm) {
     struct Env *env;
-
     /* If envid is zero, return the current environment. */
     if (!envid) {
         *env_store = curenv;
         return 0;
     }
-
     /* Look up the Env structure via the index part of the envid,
      * then check the env_id field in that struct Env
      * to ensure that the envid is not stale
@@ -65,7 +63,6 @@ envid2env(envid_t envid, struct Env **env_store, bool need_check_perm) {
         *env_store = NULL;
         return -E_BAD_ENV;
     }
-
     /* Check that the calling environment has legitimate permission
      * to manipulate the specified environment.
      * If checkperm is set, the specified environment
@@ -95,15 +92,14 @@ env_init(void) {
     // LAB 8: Your code here
 
     envs = (struct Env *)kzalloc_region(sizeof(* envs) * NENV);
-    memset(envs, 0, sizeof(*envs) * NENV);
-    cprintf("envs - %p\n", (void*)envs);
+    //memset(envs, 0, sizeof(*envs) * NENV);
+    //cprintf("envs - %p\n", (void*)envs);
 
     /* Map envs to UENVS read-only,
      * but user-accessible (with PROT_USER_ set) */
     // LAB 8: Your code here
-
-    if (map_region(&kspace, UENVS, NULL, PADDR(envs), UENVS_SIZE, PROT_R | PROT_USER_))
-        panic("Cannot map physical region at %p of size %lld", (void *)PADDR(envs), UENVS_SIZE);
+    if (map_region(current_space, UENVS, &kspace, (uintptr_t)envs, ROUNDUP(NENV * sizeof(*envs), PAGE_SIZE), PROT_R | PROT_USER_))
+       panic("Cannot map physical region at %p of size %lld", (void *)envs, UENVS_SIZE);
     /* Set up envs array */
 
     // LAB 3: Your code here
@@ -157,7 +153,6 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
      * of a prior environment inhabiting this Env structure
      * from "leaking" into our new environment */
     memset(&env->env_tf, 0, sizeof(env->env_tf));
-
     /* Set up appropriate initial values for the segment registers.
      * GD_UD is the user data (KD - kernel data) segment selector in the GDT, and
      * GD_UT is the user text (KT - kernel text) segment selector (see inc/memlayout.h).
@@ -293,7 +288,7 @@ static int
 load_icode(struct Env *env, uint8_t *binary, size_t size) {
     // LAB 3: Your code here
     // /LoaderPkg/Include/Elf64.h
-    cprintf("lox\n");
+
     struct Elf *elf = (struct Elf*)binary;
     struct Proghdr *ph = (struct Proghdr*)(binary + elf->e_phoff);
     if (elf->e_magic != ELF_MAGIC) {
@@ -301,9 +296,9 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
      return -E_INVALID_EXE;
     }
 
-    lcr3(PADDR(env->address_space.pml4));
+    //dump_page_table(env->address_space.pml4);
+    switch_address_space(&env->address_space);
 
-    cprintf("lox\n");
     for (size_t i = 0; i < elf->e_phnum; i++) {
      if (ph[i].p_type == ELF_PROG_LOAD) {
       void *src = binary + ph[i].p_offset;
@@ -313,32 +308,32 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
       size_t safety_filesize = memsz - filesz;
       size_t filesz2 = MIN(ph[i].p_filesz, memsz);
 
-      map_region(&env->address_space, (uintptr_t)dst, NULL, 0, memsz, PROT_R | PROT_W); //maybe + | PROT_USER_
-
       if (safety_filesize < 0) {
        cprintf("ph->p_filesz > ph->p_memsz\n");
        return -E_INVALID_EXE;
       } else {
-       cprintf("lox1\n");
-       cprintf("0x%08lX\n", ph[i].p_va);
-       cprintf("%p\n", src);
-       cprintf("%lu\n", filesz2);
+        map_region(&env->address_space, ROUNDDOWN((uintptr_t)dst, PAGE_SIZE), NULL, 0, ROUNDUP((uintptr_t)dst + memsz, PAGE_SIZE) - ROUNDDOWN((uintptr_t)dst, PAGE_SIZE), PROT_RWX | PROT_USER_ | ALLOC_ZERO); 
+        //cprintf("%d\n", res);
+        //region_maxref(&env->address_space, (uintptr_t)dst, memsz);
+       //cprintf("0x%08lX\n", ph[i].p_va);
+       //cprintf("%p\n", src);
+       //cprintf("%lu\n", filesz2);
        memcpy(dst, src, filesz2);
-       cprintf("lox2.1\n");
        memset((void*)ph[i].p_va + filesz2, 0, safety_filesize);
-       cprintf("lox2.2\n");
       }
      }
     }
-    cprintf("lox2.3\n");
+    switch_address_space(&kspace);
     env->env_tf.tf_rip = elf->e_entry;
     uintptr_t image_start = 0;
     uintptr_t image_end = 0;
     bind_functions(env, binary, size, image_start, image_end);
-    return 0;
  
     // LAB 8: Your code here
-    //return 0;
+    map_region(&env->address_space, USER_STACK_TOP - USER_STACK_SIZE, NULL, 0, USER_STACK_SIZE, PROT_RWX | PROT_USER_ | ALLOC_ZERO); 
+    //cprintf("%d\n", res);
+
+    return 0;
 }
 
 /* Allocates a new env with env_alloc, loads the named elf
@@ -355,8 +350,11 @@ env_create(uint8_t *binary, size_t size, enum EnvType type) {
     if (env_alloc(&new_env, 0, type) < 0) {
      panic("No free environment\n");
     }
-
+    ///curenv->binary = binary;
+    //cprintf("%p\n", (void*)curenv);
+    new_env->binary = binary;
     load_icode(new_env, binary, size);
+
 }
 
 
@@ -406,6 +404,7 @@ env_destroy(struct Env *env) {
     if (env->env_tf.tf_trapno == T_PGFLT) {
         assert(current_space);
         assert(!in_page_fault);
+        cprintf("in_page_fault\n");
         in_page_fault = 0;
     }
 }
