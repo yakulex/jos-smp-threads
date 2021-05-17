@@ -110,7 +110,7 @@ sys_exofork(void) {
     e->env_tf = curenv->env_tf;
     e->env_pgfault_upcall = curenv->env_pgfault_upcall;
 
-    e->env_tf.tf_regs.reg_rax = 0;
+    e->env_tf.tf_regs.reg_rax = 0; //child process return 0
 
     return e->env_id; 
 
@@ -155,6 +155,11 @@ sys_env_set_status(envid_t envid, int status) {
 static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func) {
     // LAB 9: Your code here:
+    struct Env *e;
+    if (envid2env(envid, &e, 1) < 0) {
+        return -E_BAD_ENV;
+    }
+    e->env_pgfault_upcall = func;
 
     return 0;
 }
@@ -193,16 +198,12 @@ sys_alloc_region(envid_t envid, uintptr_t addr, size_t size, int perm) {
         return -E_BAD_ENV;
     }
     if ( addr >= MAX_USER_ADDRESS || PAGE_OFFSET(addr)) {
-    return -E_INVAL;
+        return -E_INVAL;
     }
-    if (perm & ~PTE_SYSCALL) {
-    return -E_INVAL;
+    if (perm & ~PROT_ALL) {
+        return -E_INVAL;
     }
-    // struct Page *root = env->address_space.root;
-    // pp = page_lookup_virtual(root, 0, 0, 1);
-    // if (pp) {
-    // return -E_NO_MEM;
-    // }
+
     if (map_region(&e->address_space, addr, NULL, 0, size, perm | PROT_LAZY | ALLOC_ZERO | PROT_USER_)) {
        panic("Cannot map physical region at %p of size %lud", (void *)0, (uintptr_t)size);
        return -E_NO_MEM;
@@ -239,25 +240,30 @@ sys_map_region(envid_t srcenvid, uintptr_t srcva,
     cprintf("map\n");
 
     if (envid2env(srcenvid, &srcenv, 1) < 0 || envid2env(dstenvid, &dstenv, 1) < 0) {
-    return -E_BAD_ENV;
+        cprintf("env\n");
+        return -E_BAD_ENV;
     }
     if (srcva >= MAX_USER_ADDRESS || PAGE_OFFSET(srcva) || 
       dstva >= MAX_USER_ADDRESS || PAGE_OFFSET(dstva)) {
-    return -E_INVAL;
+        cprintf("MAX_USER_ADDRESS\n");
+        return -E_INVAL;
     }
-    if (perm & ~PTE_SYSCALL) {
-    return -E_INVAL;
+    if (perm & ~PROT_ALL) {
+        cprintf("flag1\n");
+        return -E_INVAL;
     }
-    // if (!(pp = page_lookup(srcenv->env_pml4e, srcva, &ptep))) { 
-    // return -E_INVAL;
-    // }
-    // if (!(*ptep & PTE_W) && (perm & PROT_W)) {
-    //   return -E_INVAL;
+    // don't know how -- -E_INVAL is srcva is not mapped in srcenvid's address space.
+    // how to prove srcva is read-only in srcenvid's address space ??
+    // if ((perm & PROT_W)) {
+    //     cprintf("flag2\n");
+    //     return -E_INVAL;
     // }
     if (map_region(&dstenv->address_space, dstva, &srcenv->address_space, srcva, size, perm | PROT_LAZY | PROT_USER_)) {
-       panic("Cannot map physical region at %p of size %lud", (void *)srcva, (uintptr_t)size);
-       return -E_NO_MEM;
+        panic("Cannot map physical region at %p of size %lud", (void *)srcva, (uintptr_t)size);
+        cprintf("mem\n");
+        return -E_NO_MEM;
     }
+    cprintf("map_end\n");
 
     return 0;
 }
@@ -274,6 +280,17 @@ sys_unmap_region(envid_t envid, uintptr_t va, size_t size) {
     /* Hint: This function is a wrapper around unmap_region(). */
     cprintf("unmap\n");
     // LAB 9: Your code here
+    struct Env *env;
+
+    if (envid2env(envid, &env, 1) < 0)  {
+        return -E_BAD_ENV;
+    }
+
+    if (va >= MAX_USER_ADDRESS || PAGE_OFFSET(va)) {
+        return -E_INVAL;
+    }
+
+    unmap_region(&env->address_space, va, size);
 
     return 0;
 }
