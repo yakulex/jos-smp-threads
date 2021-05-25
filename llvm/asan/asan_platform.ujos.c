@@ -65,6 +65,7 @@ platform_abort() {
 static bool
 asan_shadow_allocator(struct UTrapframe *utf) {
     // LAB 9: Your code here
+    cprintf("hello\n");
     return 0;
 }
 #endif
@@ -82,12 +83,13 @@ static int
 asan_unpoison_shared_region(void *start, void *end, void *arg) {
     (void)start, (void)end, (void)arg;
     // LAB 8: Your code here
+    cprintf("hello\n");
     return 0;
 }
 
 void
 platform_asan_init() {
-
+    cprintf("hello\n");
     asan_internal_shadow_start = (uint8_t *)SANITIZE_USER_SHADOW_BASE;
     asan_internal_shadow_end = (uint8_t *)SANITIZE_USER_SHADOW_BASE + SANITIZE_USER_SHADOW_SIZE;
     asan_internal_shadow_off = (uint8_t *)SANITIZE_USER_SHADOW_OFF;

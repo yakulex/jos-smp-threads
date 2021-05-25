@@ -92,13 +92,14 @@ env_init(void) {
     // LAB 8: Your code here
 
     envs = (struct Env *)kzalloc_region(sizeof(* envs) * NENV);
-    //memset(envs, 0, sizeof(*envs) * NENV);
+    memset(envs, 0, sizeof(*envs) * NENV);
     //cprintf("envs - %p\n", (void*)envs);
 
     /* Map envs to UENVS read-only,
      * but user-accessible (with PROT_USER_ set) */
     // LAB 8: Your code here
-    if (map_region(current_space, UENVS, &kspace, (uintptr_t)envs, ROUNDUP(NENV * sizeof(*envs), PAGE_SIZE), PROT_R | PROT_USER_))
+    //ROUNDUP(NENV * sizeof(*envs), PAGE_SIZE)
+    if (map_region(current_space, UENVS, &kspace, (uintptr_t)envs, UENVS_SIZE, PROT_R | PROT_USER_))
        panic("Cannot map physical region at %p of size %lld", (void *)envs, UENVS_SIZE);
     /* Set up envs array */
 
@@ -108,6 +109,7 @@ env_init(void) {
      envs[i].env_status = ENV_FREE;
      envs[i].env_link = env_free_list;
      envs[i].env_id = 0;
+     envs[i].env_pgfault_upcall = NULL;
      env_free_list = &envs[i];
     }
 }
@@ -401,8 +403,8 @@ env_destroy(struct Env *env) {
 
     // LAB 3: Your code here
     env->env_status = ENV_DYING;
+    env_free(env);
     if (env == curenv) {
-     env_free(env);
      sched_yield();
     }
 
