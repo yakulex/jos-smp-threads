@@ -358,11 +358,12 @@ env_create(uint8_t *binary, size_t size, enum EnvType type) {
     if (env_alloc(&new_env, 0, type) < 0) {
      panic("No free environment\n");
     }
-    ///curenv->binary = binary;
-    //cprintf("%p\n", (void*)curenv);
     new_env->binary = binary;
     load_icode(new_env, binary, size);
-
+    
+    if (type == ENV_TYPE_FS) {
+      new_env->env_tf.tf_rflags |= FL_IOPL_3;
+    }
 }
 
 

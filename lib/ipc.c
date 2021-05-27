@@ -71,8 +71,8 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, size_t size, int perm) {
 	  if (r < 0 && r != -E_IPC_NOT_RECV) {
 		  panic("ipc_send error: sys_ipc_try_send: %i\n", r);
 	  }
+  	  sys_yield();
   }
-  sys_yield();
 }
 
 /* Find the first environment of the given type.  We'll use this to

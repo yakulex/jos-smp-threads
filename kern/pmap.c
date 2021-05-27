@@ -1970,7 +1970,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm) {
     while (va < end)
     {
         struct Page* smallest_page = page_lookup_virtual(root, (uintptr_t)va, 0, 0);
-        if (!smallest_page->phy || (smallest_page->state & perm) != perm ){
+        if (!smallest_page->phy || (smallest_page->state & PAGE_PROT(perm)) != PAGE_PROT(perm)) {
           user_mem_check_addr = (uintptr_t) MAX(va,va_b);
           return -E_FAULT;
         }

@@ -207,11 +207,11 @@ sys_alloc_region(envid_t envid, uintptr_t addr, size_t size, int perm) {
         return -E_INVAL;
     }
 
-    if (map_region(&e->address_space, addr, NULL, 0, size, perm | PROT_LAZY | ALLOC_ZERO | PROT_USER_)) {
+    if (map_region(&e->address_space, addr, NULL, 0, size, perm | ALLOC_ZERO | PROT_LAZY | PROT_USER_)) {
        panic("Cannot map physical region at %p of size %lud", (void *)0, (uintptr_t)size);
        return -E_NO_MEM;
     }
-
+ 
     return 0;
 }
 
@@ -261,7 +261,7 @@ sys_map_region(envid_t srcenvid, uintptr_t srcva,
     //     cprintf("flag2\n");
     //     return -E_INVAL;
     // }
-    if (map_region(&dstenv->address_space, dstva, &srcenv->address_space, srcva, size, perm | PROT_LAZY | PROT_USER_)) { // maybe_ without PROT_LAZY
+    if (map_region(&dstenv->address_space, dstva, &srcenv->address_space, srcva, size, perm | PROT_USER_)) { // maybe_ without PROT_LAZY
         panic("Cannot map physical region at %p of size %lud", (void *)srcva, (uintptr_t)size);
         cprintf("mem\n");
         return -E_NO_MEM;
@@ -350,18 +350,14 @@ sys_ipc_try_send(envid_t envid, uint32_t value, uintptr_t srcva, size_t size, in
     if (!env->env_ipc_recving) {
         return -E_IPC_NOT_RECV;
     }
-    if (srcva < MAX_USER_ADDRESS && PAGE_OFFSET(srcva)){
-        return -E_INVAL;
-    }
-    if (srcva < MAX_USER_ADDRESS && perm & ~PROT_ALL){
-        return -E_INVAL;
-    }
-    if (srcva < MAX_USER_ADDRESS){
 
-        // if (sys_alloc_region(envid, env->env_ipc_dstva, MIN(size, env->env_ipc_maxsz), perm) < 0) {
-        //     return -E_INVAL;
-        // }
-        if (map_region(&env->address_space, env->env_ipc_dstva, &curenv->address_space, srcva, MIN(size, env->env_ipc_maxsz), perm | PROT_LAZY | PROT_USER_)) { 
+    if (srcva < MAX_USER_ADDRESS && env->env_ipc_dstva < MAX_USER_ADDRESS) {
+        if (PAGE_OFFSET(srcva) || PAGE_OFFSET(env->env_ipc_dstva)) {
+            return -E_INVAL;
+        }
+    }
+    if (srcva < MAX_USER_ADDRESS) {
+        if (map_region(&env->address_space, env->env_ipc_dstva, &curenv->address_space, srcva, MIN(size, env->env_ipc_maxsz), perm | PROT_USER_)) { 
             panic("Cannot map physical region at %p of size %lud", (void *)srcva, (uintptr_t)size);
             return -E_NO_MEM;
         }
@@ -421,7 +417,14 @@ sys_ipc_recv(uintptr_t dstva, uintptr_t maxsize) {
 static int
 sys_region_refs(uintptr_t addr, size_t size, uintptr_t addr2, uintptr_t size2) {
     // LAB 10: Your code here
-    return 0;
+    
+    int max1 = region_maxref(current_space, addr, size);
+    
+    if (addr2 >= MAX_USER_ADDRESS) return max1;
+
+    int max2 = region_maxref(current_space, addr2, size2);
+
+    return max1 - max2;
 }
 
 /* Dispatches to the correct kernel function, passing the arguments. */
@@ -449,6 +452,8 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_alloc_region((envid_t) a1, a2, (size_t) a3, (int) a4);
     } else if (syscallno == SYS_map_region) {
         return sys_map_region((envid_t) a1, a2, (envid_t) a3, a4, (size_t) a5, (int) a6);
+    } else if (syscallno == SYS_region_refs) {
+        return sys_region_refs(a1, (size_t)a2, a3, a4);
     } else if (syscallno == SYS_unmap_region) {
         return sys_unmap_region((envid_t) a1, a2, (size_t) a3);
     } else if (syscallno == SYS_env_set_pgfault_upcall) {

@@ -33,6 +33,7 @@ check_super(void) {
 bool
 block_is_free(uint32_t blockno) {
     if (super == 0 || blockno >= super->s_nblocks) return 0;
+    
     if (TSTBIT(bitmap, blockno)) return 1;
     return 0;
 }
@@ -60,6 +61,14 @@ alloc_block(void) {
      * super->s_nblocks blocks in the disk altogether. */
 
     // LAB 10: Your code here
+    blockno_t blockno;
+    for (blockno = 1; blockno <= super->s_nblocks; blockno++){
+        if (block_is_free(blockno)) {
+            CLRBIT(bitmap, blockno);
+            flush_block(&bitmap[blockno / 32]);
+            return blockno;
+        }
+    }
 
     return 0;
 }
@@ -129,9 +138,31 @@ int
 file_block_walk(struct File *f, blockno_t filebno, blockno_t **ppdiskbno, bool alloc) {
     // LAB 10: Your code here
 
-    *ppdiskbno = 0;
+    if (filebno >= NDIRECT + NINDIRECT) {
+      return -E_INVAL;
+    }
 
-    return 0;
+    if (filebno < NDIRECT) {
+        *ppdiskbno = &f->f_direct[filebno];
+        return 0;
+    } else if (!f->f_indirect) {
+        if (!alloc) {
+            return -E_NOT_FOUND;
+        }
+
+        blockno_t new_block;
+        
+        if (!(new_block = alloc_block())) {
+            return -E_NO_DISK;
+        }
+
+        f->f_indirect = new_block;
+        memset(diskaddr(f->f_indirect), 0, BLKSIZE);
+    }
+
+    *ppdiskbno = (uint32_t *) diskaddr(f->f_indirect) + filebno - NDIRECT;
+    
+     return 0;
 }
 
 /* Set *blk to the address in memory where the filebno'th
@@ -145,10 +176,26 @@ file_block_walk(struct File *f, blockno_t filebno, blockno_t **ppdiskbno, bool a
 int
 file_get_block(struct File *f, uint32_t filebno, char **blk) {
     // LAB 10: Your code here
+    int r;
+    uint32_t *pdiskbno;
+    blockno_t new_block;
 
-    *blk = 0;
+    if ((r = file_block_walk(f, filebno, &pdiskbno, 1)) < 0) {
+        return r;
+    }
+
+    if (!*pdiskbno) {
+        if ((new_block = alloc_block()) < 0) {
+          return -E_NO_DISK;
+        }
+        cprintf("file_get_block\n");
+        *pdiskbno = new_block;
+    }
+
+    *blk = (char *)diskaddr(*pdiskbno);
 
     return 0;
+    
 }
 
 /* Try to find a file named "name" in dir.  If so, set *file to it.
