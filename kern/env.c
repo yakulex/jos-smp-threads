@@ -184,7 +184,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
 #endif
 
     /* For now init trapframe with IF set */
-    env->env_tf.tf_rflags = FL_IF; // here set off cli
+    env->env_tf.tf_rflags = FL_IF;
 
     /* Clear the page fault handler until user installs one. */
     env->env_pgfault_upcall = 0;
