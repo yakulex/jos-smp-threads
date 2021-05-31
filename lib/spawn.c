@@ -284,6 +284,32 @@ map_segment(envid_t child, uintptr_t va, size_t memsz,
     /* read filesz to UTEMP */
     /* Map read section conents to child */
     /* Unmap it from parent */
+    
 
-    return 0;
+    size_t filesz_up = ROUNDUP(filesz, PAGE_SIZE);
+
+    int r;
+    
+    if (memsz > filesz_up) {
+        if ((r = sys_alloc_region(child, (void *)(va + filesz_up) , memsz - filesz_up, perm)) < 0)
+            return r;
+    } 
+
+    if ((r = sys_alloc_region(0, UTEMP, filesz_up, PROT_RW)) < 0)
+        return r;
+
+    if ((r = seek(fd, fileoffset)) < 0)
+        return r;
+
+    for (int i = 0; i < filesz; i += PAGE_SIZE) {
+        if ((r = readn(fd, UTEMP + i, MIN(PAGE_SIZE, filesz - i)) < 0))
+            return r;
+    }
+
+    if ((r = sys_map_region(0, UTEMP, child, (void *)va, filesz_up, perm | PROT_LAZY)) < 0)
+        panic("spawn: sys_page_map data: %i", r);
+
+    sys_unmap_region(0, UTEMP, filesz_up);
+
+    return 0; 
 }

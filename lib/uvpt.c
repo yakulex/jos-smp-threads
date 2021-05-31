@@ -42,5 +42,18 @@ int
 foreach_shared_region(int (*fun)(void *start, void *end, void *arg), void *arg) {
     /* Calls fun() for every shared region */
     // LAB 11: Your code here
+    int res;
+
+    for (size_t i = 0; i < MAX_USER_ADDRESS; i += PAGE_SIZE) {
+        void *start = (void*)i;
+        void *end = (void*)(i + PAGE_SIZE);
+        
+        if (get_prot(start) & PROT_SHARE && is_page_present(start)) {
+            if ((res = fun(start, end, arg)) < 0)
+                return res;
+        }
+        
+    }
+
     return 0;
 }
