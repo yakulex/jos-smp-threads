@@ -1,6 +1,6 @@
 #include <inc/lib.h>
 
-char buf[8192];
+char buf[1024];
 
 void
 cat(int f, char *s) {

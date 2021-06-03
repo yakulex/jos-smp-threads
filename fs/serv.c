@@ -300,7 +300,7 @@ serve(void) {
         perm = 0;
         size_t sz = PAGE_SIZE;
         req = ipc_recv((int32_t *)&whom, fsreq, &sz, &perm);
-        if (1) {
+        if (debug) {
             cprintf("fs req %d from %08x [page %08lx: %s]\n",
                     req, whom, (unsigned long)get_uvpt_entry(fsreq),
                     (char *)fsreq);

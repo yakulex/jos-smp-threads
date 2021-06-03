@@ -85,6 +85,8 @@ spawn(const char *prog, const char **argv) {
     struct Elf *elf = (struct Elf *)elf_buf;
     res = readn(fd, elf_buf, sizeof(elf_buf));
     if (res != sizeof(elf_buf)) {
+        cprintf("%d\n", res);
+        cprintf("%ld\n", sizeof(elf_buf));
         cprintf("Wrong ELF header size or read error: %i\n", res);
         close(fd);
         return -E_NOT_EXEC;

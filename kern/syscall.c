@@ -356,7 +356,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, uintptr_t srcva, size_t size, in
             return -E_INVAL;
         }
     }
-    if (srcva < MAX_USER_ADDRESS) {
+    if (srcva < MAX_USER_ADDRESS) { 
         if (map_region(&env->address_space, env->env_ipc_dstva, &curenv->address_space, srcva, MIN(size, env->env_ipc_maxsz), perm | PROT_USER_)) { 
             panic("Cannot map physical region at %p of size %lud", (void *)srcva, (uintptr_t)size);
             return -E_NO_MEM;
@@ -397,10 +397,13 @@ sys_ipc_recv(uintptr_t dstva, uintptr_t maxsize) {
     if (dstva < MAX_USER_ADDRESS && PAGE_OFFSET(dstva)){
         return -E_INVAL;
     }
+
     curenv->env_ipc_recving = 1;
-    curenv->env_ipc_maxsz = maxsize;
-    curenv->env_ipc_dstva = dstva;
     curenv->env_status = ENV_NOT_RUNNABLE;
+    if (dstva < MAX_USER_ADDRESS) {
+        curenv->env_ipc_dstva = dstva;
+        curenv->env_ipc_maxsz = maxsize;
+    } 
     curenv->env_tf.tf_regs.reg_rax = 0;
     sched_yield();
     return 0;
