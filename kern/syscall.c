@@ -448,7 +448,7 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf) {
 static int
 sys_gettime(void) {
     // LAB 12: Your code here
-    return 0;
+    return gettime();
 }
 
 /*
@@ -505,6 +505,8 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_unmap_region((envid_t) a1, a2, (size_t) a3);
     } else if (syscallno == SYS_env_set_pgfault_upcall) {
         return sys_env_set_pgfault_upcall((envid_t) a1, (void *) a2);
+    } else if (syscallno == SYS_gettime) {
+        return sys_gettime();
     } else if (syscallno == SYS_yield) {
         sys_yield();
         return 0;

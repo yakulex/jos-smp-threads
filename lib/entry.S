@@ -16,6 +16,8 @@
 .set uvpdp,UVPDP
 .globl uvpml4
 .set uvpml4,UVPML4
+.globl vsys
+.set vsys, UVSYS
 
 # Entrypoint - this is where the kernel (or our parent environment)
 # starts us running when we are initially loaded into a new environment
