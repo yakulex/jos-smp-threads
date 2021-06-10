@@ -37,6 +37,11 @@ KERN_SRCFILES := kern/bootstrap.S \
 			kern/uefiasm.S \
 			kern/spinlock.c
 
+# Source files for SMP
+KERN_SRCFILES +=	kern/mpentry.S \
+			kern/mpconfig.c \
+			kern/lapic.c
+
 ifeq ($(CONFIG_KSPACE),y)
 KERN_SRCFILES += kern/alloc.c
 endif
