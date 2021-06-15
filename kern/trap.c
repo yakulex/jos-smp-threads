@@ -16,6 +16,7 @@
 #include <kern/timer.h>
 #include <kern/vsyscall.h>
 #include <kern/traceopt.h>
+#include <kern/cpu.h>
 
 static struct Taskstate ts;
 

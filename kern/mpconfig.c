@@ -16,8 +16,10 @@ int ismp;
 int ncpu;
 
 // Per-CPU kernel stacks
-unsigned char percpu_kstacks[NCPU][KSTKSIZE]
-__attribute__ ((aligned(PGSIZE)));
+unsigned char percpu_kstacks[NCPU][KERN_STACK_SIZE]
+__attribute__ ((aligned(PAGE_SIZE)));
+unsigned char percpu_pfstacks[NCPU][KERN_PF_STACK_SIZE]
+__attribute__ ((aligned(PAGE_SIZE)));
 
 
 // See MultiProcessor Specification Version 1.[14]

@@ -32,7 +32,8 @@ extern struct CpuInfo *bootcpu;     // The boot-strap processor (BSP)
 extern physaddr_t lapicaddr;        // Physical MMIO address of the local APIC
 
 // Per-CPU kernel stacks
-extern unsigned char percpu_kstacks[NCPU][KSTKSIZE];
+extern unsigned char percpu_kstacks[NCPU][KERN_STACK_SIZE];
+extern unsigned char percpu_pfstacks[NCPU][KERN_PF_STACK_SIZE];
 
 int cpunum(void);
 #define thiscpu (&cpus[cpunum()])
