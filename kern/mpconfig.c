@@ -107,7 +107,7 @@ mpsearch(void)
     uint32_t p;
     struct mp *mp;
 
-    static_assert(sizeof(*mp) == 16);
+    static_assert(sizeof(*mp) == 16, "Wrong size of mp");
 
     // The BIOS data area lives in 16-bit segment 0x40.
     bda = (uint8_t *) KADDR(0x40 << 4);
