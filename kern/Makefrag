@@ -39,6 +39,7 @@ KERN_SRCFILES := kern/bootstrap.S \
 
 # Source files for SMP
 KERN_SRCFILES +=	kern/mpentry.S \
+			kern/mp64entry.S \
 			kern/mpconfig.c \
 			kern/lapic.c
 

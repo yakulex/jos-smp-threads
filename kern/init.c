@@ -19,6 +19,9 @@
 #include <kern/kdebug.h>
 #include <kern/traceopt.h>
 #include <kern/cpu.h>
+#include <kern/spinlock.h>
+
+static void boot_aps(void);
 
 void
 timers_init(void) {
@@ -163,6 +166,12 @@ i386_init(void) {
     timers_schedule("hpet0");
     clock_idt_init();
 
+    // Acquire the big kernel lock before waking up APs
+    lock_kernel();
+
+    // Starting non-boot CPUs
+    boot_aps();
+
 #ifdef CONFIG_KSPACE
     /* Touch all you want */
     ENV_CREATE_KERNEL_TYPE(prog_test1);
@@ -191,6 +200,59 @@ i386_init(void) {
 
     /* Schedule and run the first user environment! */
     sched_yield();
+}
+
+// While boot_aps is booting a given CPU, it communicates the per-core
+// stack pointer that should be loaded by mpentry.S to that CPU in
+// this variable.
+void *mpentry_kstack;
+
+static void
+boot_aps(void)
+{
+    extern unsigned char mpentry_start[], mpentry_end[];
+    void *code;
+    struct CpuInfo *c;
+
+    // Write entry code to unused memory at MPENTRY_PADDR
+    code = KADDR(MPENTRY_PADDR);
+    memmove(code, mpentry_start, mpentry_end - mpentry_start);
+
+    // Boot each AP one at a time
+    for (c = cpus; c < cpus + ncpu; c++) {
+        if (c == cpus + cpunum())  // We've started already.
+            continue;
+
+        // Tell mpentry.S what stack to use 
+        mpentry_kstack = percpu_kstacks[c - cpus] + KERN_STACK_SIZE;
+        // Start the CPU at mpentry_start
+        lapic_startap(c->cpu_id, PADDR(code));
+        // Wait for the CPU to finish some basic setup in mp_main()
+        while(c->cpu_status != CPU_STARTED)
+            ;
+    }
+}
+
+// Setup code for APs
+void
+mp_main(void)
+{
+    // We are in high RIP now, safe to switch to kernel space 
+    lcr3(kspace.cr3);
+    cprintf("SMP: CPU %d starting\n", cpunum());
+
+    lapic_init();
+    trap_init_percpu();
+    xchg(&thiscpu->cpu_status, CPU_STARTED); // tell boot_aps() we're up
+
+    // Now that we have finished some basic setup, call sched_yield()
+    // to start running processes on this CPU.  But make sure that
+    // only one CPU can enter the scheduler at a time!
+    //
+    // Your code here:
+    lock_kernel();
+    sched_yield();
+    for (;;);
 }
 
 /* Variable panicstr contains argument to first call to panic; used as flag

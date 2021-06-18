@@ -198,6 +198,9 @@
 
 #define MAX_LOW_ADDR_KERN_SIZE 0x3200000
 
+// Physical address of startup code for non-boot CPUs (APs)
+#define MPENTRY_PADDR   0x7000
+
 #ifndef __ASSEMBLER__
 
 typedef uint64_t pml4e_t;
