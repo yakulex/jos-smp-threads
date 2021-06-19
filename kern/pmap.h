@@ -114,7 +114,6 @@ int force_alloc_page(struct AddressSpace *spc, uintptr_t va, int maxclass);
 void dump_page_table(pte_t *pml4);
 void dump_memory_lists(void);
 void dump_virtual_tree(struct Page *node, int class);
-
 void *kzalloc_region(size_t size);
 
 void *mmio_map_region(physaddr_t addr, size_t size);
@@ -172,5 +171,10 @@ set_wp(bool wp) {
     lcr0(wp ? old | CR0_WP : old & ~CR0_WP);
 }
 
+static inline void*
+page2kva(struct Page *pp)
+{
+    return KADDR(page2pa(pp));
+}
 
 #endif /* !JOS_KERN_PMAP_H */

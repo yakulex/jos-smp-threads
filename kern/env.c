@@ -18,6 +18,7 @@
 #include <kern/pmap.h>
 #include <kern/traceopt.h>
 #include <kern/vsyscall.h>
+#include <inc/jthread.h>
 
 /* Currently active environment */
 struct Env *curenv = NULL;
@@ -203,6 +204,14 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
 
     /* Also clear the IPC receiving flag. */
     env->env_ipc_recving = 0;
+
+    // Clear out the threading variables
+    env->env_child_thread = false;
+    env->env_process_envid = env->env_id;
+    env->env_next_thread = NULL;
+    env->env_thread_retval = NULL;
+    env->env_thread_status = THREAD_NOT_RUNNABLE;
+    env->env_num_threads = 0;
 
     /* Commit the allocation */
     env_free_list = env->env_link;
@@ -416,6 +425,20 @@ env_destroy(struct Env *env) {
 
     // LAB 3: Your code here
     env->env_status = ENV_DYING;
+
+    // If this isn't a child thread, kill all the associated threads with
+    // the main process
+    if (!env->env_child_thread)
+    {
+      struct Env *next = env->env_next_thread;
+      while (next)
+      {
+        struct Env *temp = next->env_next_thread;
+        env_destroy(next);
+        next = temp;
+      }
+    }
+  
     env_free(env);
     if (env == curenv) {
      sched_yield();

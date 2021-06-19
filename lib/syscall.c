@@ -2,6 +2,7 @@
 
 #include <inc/syscall.h>
 #include <inc/lib.h>
+#include <inc/jthread.h>
 
 static inline int64_t __attribute__((always_inline))
 syscall(uintptr_t num, bool check, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, uintptr_t a6) {
@@ -146,4 +147,22 @@ sys_ipc_recv(void *dstva, size_t size) {
 int
 sys_gettime(void) {
     return syscall(SYS_gettime, 0, 0, 0, 0, 0, 0, 0);
+}
+
+jthread_t
+sys_kthread_create(void *jthread_main, void *start_routine, void *arg)
+{
+  return syscall(SYS_kthread_create, 0, (uintptr_t)jthread_main, (uintptr_t)start_routine, (uintptr_t)arg, 0, 0, 0);
+}
+
+int
+sys_kthread_join(jthread_t tid, void **retstore)
+{
+  return syscall(SYS_kthread_join, 0, tid, (uintptr_t)retstore, 0, 0, 0, 0);
+}
+
+int
+sys_kthread_exit(void *retval)
+{
+  return syscall(SYS_kthread_exit, 0, (uintptr_t)retval, 0, 0, 0, 0, 0);
 }

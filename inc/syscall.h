@@ -19,6 +19,9 @@ enum {
     SYS_ipc_try_send,
     SYS_ipc_recv,
     SYS_gettime,
+    SYS_kthread_create,
+    SYS_kthread_join,
+    SYS_kthread_exit,
     NSYSCALLS
 };
 
