@@ -10,6 +10,7 @@
 #include <inc/assert.h>
 #include <inc/env.h>
 #include <inc/x86.h>
+#include <kern/cpu.h>
 
 #define CLASS_BASE    12
 #define CLASS_SIZE(c) (1ULL << ((c) + CLASS_BASE))
@@ -121,7 +122,7 @@ void *mmio_map_region(physaddr_t addr, size_t size);
 void *mmio_remap_last_region(physaddr_t addr, void *oldva, size_t oldsz, size_t size);
 
 extern struct AddressSpace kspace;
-extern struct AddressSpace *current_space;
+#define current_space (thiscpu->cpu_space)
 extern struct Page root;
 extern char bootstacktop[], bootstack[];
 extern size_t max_memory_map_addr;

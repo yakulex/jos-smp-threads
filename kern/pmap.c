@@ -33,8 +33,6 @@ static size_t free_desc_count;
 size_t max_memory_map_addr;
 /* Kernel address space */
 struct AddressSpace kspace;
-/* Currently active address spcae */
-struct AddressSpace *current_space;
 /* Root node of physical memory tree */
 struct Page root;
 /* Top address for page pools mappings */
@@ -1605,6 +1603,10 @@ detect_memory(void) {
 
         attach_region(0, max_memory_map_addr, ALLOCATABLE_NODE);
     }
+
+    /* Attach MPENTRY_PADDR page*/
+    extern unsigned char mpentry_start[], mpentry_end[];
+    attach_region(MPENTRY_PADDR,  MPENTRY_PADDR + mpentry_end - mpentry_start, RESERVED_NODE);
 
     if (trace_init) {
         cprintf("Physical memory: %zuM available, base = %zuK, extended = %zuK\n",

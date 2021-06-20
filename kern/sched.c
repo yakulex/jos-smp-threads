@@ -2,9 +2,9 @@
 #include <inc/x86.h>
 #include <kern/env.h>
 #include <kern/monitor.h>
+#include <kern/spinlock.h>
 
 
-struct Taskstate cpu_ts;
 _Noreturn void sched_halt(void);
 
 /* Choose a user environment to run and run it */
@@ -26,31 +26,22 @@ sched_yield(void) {
 
     // LAB 3: Your code here:
     int go = curenv ? ENVX(curenv_getid()) : 0;
-    int index = -1;
 
     for (int i = 0; i < NENV; ++i) {
-        int cur = (i + go) % NENV;
+        int cur = ENVX(i + go);
         if (envs[cur].env_status == ENV_RUNNABLE) {
-            index = cur;
-            break;
+            env_run(envs + cur);
         }
     }
 
-    if (index >= 0) {
-        env_run(&envs[index]);
-        cprintf("run env1\n");
-    } else if (curenv && curenv->env_status == ENV_RUNNING) {
+    if (curenv && curenv->env_status == ENV_RUNNING) {
         env_run(curenv);
-        cprintf("run curenv\n");
     }
-
-    cprintf("Halt\n"); 
 
     /* No runnable environments,
      * so just halt the cpu */
-
+    cprintf("Halt\n"); 
     sched_halt(); 
-
 }
 
 /* Halt this CPU when there is nothing to do. Wait until the
@@ -66,12 +57,12 @@ sched_halt(void) {
             envs[i].env_status == ENV_RUNNING) break;
     if (i == NENV) {
         cprintf("No runnable environments in the system!\n");
-        for (;;) monitor(NULL);
+        // for (;;) monitor(NULL);
     }
 
     /* Mark that no environment is running on CPU */
     curenv = NULL;
-
+    smart_unlock_kernel();
     /* Reset stack pointer, enable interrupts and then halt */
     asm volatile(
             "movq $0, %%rbp\n"
@@ -79,7 +70,7 @@ sched_halt(void) {
             "pushq $0\n"
             "pushq $0\n"
             "sti\n"
-            "hlt\n" ::"a"(cpu_ts.ts_rsp0));
+            "hlt\n" ::"a"(thiscpu->cpu_ts.ts_rsp0));
 
     /* Unreachable */
     for (;;)

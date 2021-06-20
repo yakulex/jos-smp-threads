@@ -23,6 +23,8 @@ struct CpuInfo {
     volatile unsigned cpu_status;   // The status of the CPU
     struct Env *cpu_env;            // The currently-running environment.
     struct Taskstate cpu_ts;        // Used by x86 to find stack for interrupt
+    struct AddressSpace *cpu_space;
+    volatile bool in_kernel;
 };
 
 // Initialized in mpconfig.c
@@ -43,9 +45,6 @@ void lapic_init(void);
 void lapic_startap(uint8_t apicid, uint32_t addr);
 void lapic_eoi(void);
 void lapic_ipi(int vector);
-
-/* Used by x86 to find stack for interrupt */
-extern struct Taskstate cpu_ts;
 
 extern char in_intr;
 extern bool in_clk_intr;

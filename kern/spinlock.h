@@ -3,6 +3,7 @@
 
 #include <inc/types.h>
 #include <kern/traceopt.h>
+#include <kern/cpu.h>
 
 /* Mutual exclusion lock */
 struct spinlock {
@@ -30,9 +31,31 @@ lock_kernel(void) {
 }
 
 static inline void
+smart_lock_kernel(void) {
+    if (!thiscpu->in_kernel)
+    {
+        spin_lock(&kernel_lock);
+    }
+    thiscpu->in_kernel = true;
+
+}
+
+static inline void
 unlock_kernel(void) {
     spin_unlock(&kernel_lock);
 
+    /* Normally we wouldn't need to do this, but QEMU only runs
+     * one CPU at a time and has a long time-slice.  Without the
+     * pause, this CPU is likely to reacquire the lock before
+     * another CPU has even been given a chance to acquire it. */
+    asm volatile("pause");
+}
+
+static inline void
+smart_unlock_kernel(void) {
+    assert (thiscpu->in_kernel);
+    spin_unlock(&kernel_lock);
+    thiscpu->in_kernel = false;
     /* Normally we wouldn't need to do this, but QEMU only runs
      * one CPU at a time and has a long time-slice.  Without the
      * pause, this CPU is likely to reacquire the lock before

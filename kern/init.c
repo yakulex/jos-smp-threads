@@ -148,7 +148,7 @@ i386_init(void) {
 
     /* Lab 6 memory management initialization functions */
     init_memory();
-
+    thiscpu->in_kernel = false;
     pic_init();
     timers_init();
 
@@ -167,7 +167,8 @@ i386_init(void) {
     clock_idt_init();
 
     // Acquire the big kernel lock before waking up APs
-    lock_kernel();
+
+    smart_lock_kernel();
 
     // Starting non-boot CPUs
     boot_aps();
@@ -239,6 +240,8 @@ mp_main(void)
 {
     // We are in high RIP now, safe to switch to kernel space 
     lcr3(kspace.cr3);
+    switch_address_space(&kspace);
+    thiscpu->in_kernel = true;
     cprintf("SMP: CPU %d starting\n", cpunum());
 
     lapic_init();
@@ -248,9 +251,8 @@ mp_main(void)
     // Now that we have finished some basic setup, call sched_yield()
     // to start running processes on this CPU.  But make sure that
     // only one CPU can enter the scheduler at a time!
-    //
-    // Your code here:
-    lock_kernel();
+    thiscpu->in_kernel = false;
+    smart_lock_kernel();
     sched_yield();
     for (;;);
 }

@@ -18,9 +18,7 @@
 #include <kern/pmap.h>
 #include <kern/traceopt.h>
 #include <kern/vsyscall.h>
-
-/* Currently active environment */
-struct Env *curenv = NULL;
+#include <kern/spinlock.h>
 
 #ifdef CONFIG_KSPACE
 /* All environments */
@@ -523,6 +521,7 @@ env_run(struct Env *env) {
     curenv->env_status = ENV_RUNNING;
     curenv->env_runs += 1;
     switch_address_space(&(curenv->address_space));
+    smart_unlock_kernel();
     env_pop_tf(&curenv->env_tf);
 
     while(1) {}
