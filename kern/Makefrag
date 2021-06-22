@@ -121,7 +121,7 @@ KERN_BINFILES :=	user/hello \
 			user/bounds \
 			user/implicitconv \
 			user/signedoverflow \
-			user/matrix
+			user/test
 KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
 endif
 

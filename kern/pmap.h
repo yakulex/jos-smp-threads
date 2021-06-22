@@ -118,6 +118,8 @@ void *kzalloc_region(size_t size);
 
 void *mmio_map_region(physaddr_t addr, size_t size);
 void *mmio_remap_last_region(physaddr_t addr, void *oldva, size_t oldsz, size_t size);
+struct Page *page_lookup(struct Page *hint, uintptr_t addr, int class, enum PageState type, bool alloc);
+struct Page *page_lookup_virtual(struct Page *node, uintptr_t addr, int class, int alloc);
 
 extern struct AddressSpace kspace;
 extern struct AddressSpace *current_space;

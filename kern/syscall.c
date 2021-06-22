@@ -14,6 +14,7 @@
 #include <kern/syscall.h>
 #include <kern/trap.h>
 #include <kern/traceopt.h>
+#include <kern/spinlock.h>
 
 #define DEBUGTHREAD 1
 
@@ -479,7 +480,6 @@ sys_kthread_create(void *entry, void *start, void *arg)
 {
   jthread_t tid;
   int ret;
-
   if ((tid = sys_exofork()) < 0)
     return tid;
 
@@ -508,7 +508,7 @@ sys_kthread_create(void *entry, void *start, void *arg)
   process->env_num_threads++;
   int threadnum = process->env_num_threads;
   if (DEBUGTHREAD)
-    cprintf("%08x's Thread number %d\n", e->env_id, threadnum);
+    cprintf("%08x's Thread number %d\n", curenv->env_id, threadnum);
 
   // Find the last thread on the linked list
   struct Env *next_thread = curenv;
@@ -518,54 +518,80 @@ sys_kthread_create(void *entry, void *start, void *arg)
   next_thread->env_next_thread = e;
 
   // Use the same address space and pgfault handler
-  // e->env_pgdir = curenv->env_pgdir;
 
-  //env_duplicate_pgdir(curenv, e); переписал под нашу
-  if (map_region(&e->address_space, 0, &curenv->address_space, 0, MAX_USER_ADDRESS, PROT_ALL)) 
-    panic("Cannot map physical region at %p of size %lud", (void *)0, (uintptr_t) MAX_USER_ADDRESS);
-  e->env_pgfault_upcall = curenv->env_pgfault_upcall;
+  // if (map_region(&e->address_space, 0, &curenv->address_space, 0, MAX_USER_ADDRESS, PROT_ALL | PROT_USER_ | PROT_COMBINE)) 
+  //   panic("Cannot map physical region at %p of size %lud", (void *)0, (uintptr_t) MAX_USER_ADDRESS);
+  // e->env_pgfault_upcall = curenv->env_pgfault_upcall;
+  int r;
+  if ((r = sys_map_region(sys_getenvid(), 0, tid, 0, MAX_USER_ADDRESS, PROT_ALL | PROT_LAZY | PROT_COMBINE)) < 0)
+        panic("map region fault: %i", r);
+
+  if ((r = sys_env_set_pgfault_upcall(tid, curenv->env_pgfault_upcall)) < 0)
+       panic("sys_env_set_pgfault_upcall: %i", r);
 
   // Allocate new stack
 
-  uintptr_t va = (uintptr_t)(USER_STACK_TOP - ((threadnum * (NSTACKPAGES + 1) + NSTACKPAGES) * PAGE_SIZE));
+  uintptr_t va = (uintptr_t)(USER_STACK_TOP - (threadnum * (USER_STACK_SIZE + PAGE_SIZE) + USER_STACK_SIZE));
   int perm = PROT_RWX | PROT_USER_ | ALLOC_ZERO;
-
-  if (map_region(&e->address_space, va, NULL, 0, NSTACKPAGES * PAGE_SIZE, perm))
-    panic("Cannot map physical region at %p of size %llu", (void *)va, (uintptr_t) NSTACKPAGES * PAGE_SIZE);
+  if (map_region(&e->address_space, va, NULL, 0, USER_STACK_SIZE, perm))
+    panic("Cannot map physical region at %p of size %lu", (void *)va, (uintptr_t) USER_STACK_SIZE);
 
   if (DEBUGTHREAD)
     cprintf("New page mapped at va:0x%08lx\n", va);
-  // va now points to the top of the mapped stack
 
   // Put the arguments on the stack
-  //void *kva = page2kva(page);
-  *(uint64_t *)(va + PAGE_SIZE - 4) = (uint64_t)arg;
-  *(uint64_t *)(va + PAGE_SIZE - 8) = (uint64_t)start;
+
+  struct AddressSpace* old_current = switch_address_space(&e->address_space);
+  *(uint64_t *)(va + USER_STACK_SIZE - 8) = (uint64_t)arg;
+  *(uint64_t *)(va + USER_STACK_SIZE - 16) = (uint64_t)start;
+  switch_address_space(old_current);
+
+    // struct Page *page;
+    // page = page_lookup(NULL, va + USER_STACK_SIZE - PAGE_SIZE, 0, PARTIAL_NODE, 0);
+
+    
+    // cprintf("here\n");
+    // void *kva = page2kva(page);
+    // cprintf("%p\n", kva);
+
+    // *(uint64_t *)(kva + PAGE_SIZE - 8) = (uint64_t)arg;
+    // *(uint64_t *)(kva + PAGE_SIZE - 16) = (uint64_t)start;
+
 
   // Set the eip and esp to the new values
   e->env_tf.tf_rip = (uintptr_t)entry;
-  e->env_tf.tf_rsp = (uintptr_t)(va - 12);
+  e->env_tf.tf_rsp = (uintptr_t)(va + USER_STACK_SIZE - 24);
 
-  e->env_status = ENV_RUNNABLE;
+  //e->env_status = ENV_RUNNABLE;
+  if ((r = sys_env_set_status(tid, ENV_RUNNABLE)) < 0)
+        panic("sys_env_set_status: %i", r);
+
   
   if (DEBUGTHREAD)
   {
     cprintf("Made a runnable thread\n");
-    cprintf("Thread's eip: %08lx\n", e->env_tf.tf_rip);
-    cprintf("Thread's esp: %08lx\n", e->env_tf.tf_rsp);
+    cprintf("arg: %08llx\n", va + USER_STACK_SIZE - 8);
+    cprintf("start: %08llx\n", va + USER_STACK_SIZE - 16);
+    cprintf("Thread's rip: %08lx\n", e->env_tf.tf_rip);
+    cprintf("Thread's rsp: %08lx\n", e->env_tf.tf_rsp);
   }
+
   return tid;
 }
 
 static int
 sys_kthread_join(jthread_t tid, void **retstore)
 {
+
   struct Env *e;
   int ret;
   if ((ret = envid2env(tid, &e, 0)) < 0)
     return ret;
-  if (e->env_thread_status != THREAD_ZOMBIE)
+  if (e->env_thread_status != THREAD_ZOMBIE){
+    cprintf("not zombi\n");
     return -1;
+  }
+    
   // Check that we have permission to reap this thread
   if (e->env_process_envid != curenv->env_process_envid)
     return -1;
@@ -576,6 +602,7 @@ sys_kthread_join(jthread_t tid, void **retstore)
   // *kva = (uint32_t)e->env_thread_retval;
 
   // Mark the env we reaped as done
+
   e->env_thread_status = THREAD_DONE;
   e->env_thread_retval = NULL;
 

@@ -90,8 +90,10 @@ int determ(int a[MATRIXSIZE][MATRIXSIZE], int n, bool thread, bool ipc)
         }
         for (ti = 0; ti < MATRIXSIZE - 1; ti++)
         {
-          for (tj = 0; tj < MATRIXSIZE - 1; tj++)
+          for (tj = 0; tj < MATRIXSIZE - 1; tj++) {
+            cprintf("AAAAAAAAAAAAAAA\n");
             (*thread_matrix)[ti][tj] = temp[ti][tj];
+            cprintf("AAAAAAAAAAAAAAA\n"); }
         }
         if (DEBUGDET)
         {
@@ -184,17 +186,17 @@ umain(int argc, char *argv[])
   int total = 0;
   unsigned tic, toc;
   int det;
-  cprintf("\nSerial run:\n");
-  for (i = 0; i < NUMTRIALS; i++)
-  {
-    tic = sys_gettime();
-    det = determ(matrix, MATRIXSIZE, false, false);
-    // cprintf("det is: %d\n", det);
-    toc = sys_gettime();
-    cprintf("~~time that serial run took: %d msec~~\n", toc - tic);
-    total += toc - tic;
-  }
-  cprintf("\n~~~~~~~ SERIAL AVE: %d ~~~~~~\n\n", total / NUMTRIALS);
+  // cprintf("\nSerial run:\n");
+  // for (i = 0; i < NUMTRIALS; i++)
+  // {
+  //   tic = sys_gettime();
+  //   det = determ(matrix, MATRIXSIZE, false, false);
+  //   // cprintf("det is: %d\n", det);
+  //   toc = sys_gettime();
+  //   cprintf("~~time that serial run took: %d msec~~\n", toc - tic);
+  //   total += toc - tic;
+  // }
+  // cprintf("\n~~~~~~~ SERIAL AVE: %d ~~~~~~\n\n", total / NUMTRIALS);
 
   total = 0;
   cprintf("Thread run:\n");

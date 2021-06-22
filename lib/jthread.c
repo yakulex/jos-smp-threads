@@ -13,7 +13,10 @@ jthread_main(void *(*start_routine)(void *), void *arg)
 {
   if (DEBUG)
     cprintf("In jthread_main\n");
+  cprintf("A\n");
+  cprintf("%08x\n", sys_getenvid());
   void *ret = start_routine(arg);
+  cprintf("A\n");
   jthread_exit(ret);
   // Should not reach here
   return NULL;
@@ -31,8 +34,8 @@ jthread_create(jthread_t *thread,
   jthread_t tid;
   if ((tid = sys_kthread_create((void *)jthread_main, (void *)start_routine, arg)) < 0)
     return -1;
-  
   *thread = tid;
+  
 
   return 0;
 }
@@ -43,7 +46,9 @@ jthread_join(jthread_t th, void **thread_return)
   int ret = 0;
   while ((ret = sys_kthread_join(th, thread_return)) < 0)
   {
+    cprintf("sys_yield\n");
     sys_yield();
+    cprintf("after_sys\n");
   }
   return 0;
 }
