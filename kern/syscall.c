@@ -539,28 +539,14 @@ sys_kthread_create(void *entry, void *start, void *arg)
   if (DEBUGTHREAD)
     cprintf("New page mapped at va:0x%08lx\n", va);
 
-  // Put the arguments on the stack
-    // i think there is a problem
-  struct AddressSpace* old_current = switch_address_space(&e->address_space);
-  *(uint64_t *)(va + USER_STACK_SIZE - 8) = (uint64_t)arg;
-  *(uint64_t *)(va + USER_STACK_SIZE - 16) = (uint64_t)start;
-  switch_address_space(old_current);
-
-    // struct Page *page;
-    // page = page_lookup(NULL, va + USER_STACK_SIZE - PAGE_SIZE, 0, PARTIAL_NODE, 0);
-
-    
-    // cprintf("here\n");
-    // void *kva = page2kva(page);
-    // cprintf("%p\n", kva);
-
-    // *(uint64_t *)(kva + PAGE_SIZE - 8) = (uint64_t)arg;
-    // *(uint64_t *)(kva + PAGE_SIZE - 16) = (uint64_t)start;
-
-
   // Set the eip and esp to the new values
   e->env_tf.tf_rip = (uintptr_t)entry;
-  e->env_tf.tf_rsp = (uintptr_t)(va + USER_STACK_SIZE - 24);
+  e->env_tf.tf_rsp = (uintptr_t)(va + USER_STACK_SIZE);
+
+  // First arg
+  e->env_tf.tf_regs.reg_rdi = (uint64_t)start;
+  // Second arg
+  e->env_tf.tf_regs.reg_rsi = (uint64_t)arg;
 
   //e->env_status = ENV_RUNNABLE;
   if ((r = sys_env_set_status(tid, ENV_RUNNABLE)) < 0)
