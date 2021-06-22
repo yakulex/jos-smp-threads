@@ -21,6 +21,7 @@
 #include <inc/fs.h>
 #include <inc/fd.h>
 #include <inc/args.h>
+#include <inc/jthread.h>
 
 #ifdef SANITIZE_USER_SHADOW_BASE
 /* asan unpoison routine used for whitelisting regions. */
@@ -96,6 +97,13 @@ int sys_ipc_recv(void *rcv_pg, size_t size);
 int sys_gettime(void);
 
 int vsys_gettime(void);
+
+// for threading
+jthread_t sys_kthread_create(void *jthread_main, void *start_routine, void *arg);
+int sys_kthread_join(jthread_t tid, void **retstore);
+int sys_kthread_exit(void *retval);
+// int sys_kthread_mutex_lock(jthread_mutex_t *mutex);
+// int sys_kthread_mutex_unlock(jthread_mutex_t *mutex);
 
 /* This must be inlined. Exercise for reader: why? */
 static inline envid_t __attribute__((always_inline))

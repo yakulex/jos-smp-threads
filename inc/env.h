@@ -30,6 +30,8 @@ typedef int32_t envid_t;
 #define NENV        (1 << LOG2NENV)
 #define ENVX(envid) ((envid) & (NENV - 1))
 
+#define NSTACKPAGES 3  // Number of pages to give to each stack
+
 /* Values of env_status in struct Env */
 enum {
     ENV_FREE,
@@ -82,6 +84,14 @@ struct Env {
     uint32_t env_ipc_value;  /* Data value sent to us */
     envid_t env_ipc_from;    /* envid of the sender */
     int env_ipc_perm;        /* Perm of page mapping received */
+
+  // Final Multithreading
+  bool env_child_thread;         // Are we a thread?
+  envid_t env_process_envid;     // If so, what is our process?
+  struct Env *env_next_thread;   // Linked list of threads in a process
+  unsigned env_thread_status;    // Thread-specific status information
+  void *env_thread_retval;       // Value that the thread is returning on thread_join
+  int env_num_threads;           // Number of child threads this process has
 };
 
 #endif /* !JOS_INC_ENV_H */
