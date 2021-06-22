@@ -540,7 +540,7 @@ sys_kthread_create(void *entry, void *start, void *arg)
     cprintf("New page mapped at va:0x%08lx\n", va);
 
   // Put the arguments on the stack
-
+    // i think there is a problem
   struct AddressSpace* old_current = switch_address_space(&e->address_space);
   *(uint64_t *)(va + USER_STACK_SIZE - 8) = (uint64_t)arg;
   *(uint64_t *)(va + USER_STACK_SIZE - 16) = (uint64_t)start;
