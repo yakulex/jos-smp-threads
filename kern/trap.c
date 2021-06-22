@@ -16,8 +16,8 @@
 #include <kern/timer.h>
 #include <kern/vsyscall.h>
 #include <kern/traceopt.h>
-
-static struct Taskstate ts;
+#include <kern/cpu.h>
+#include <kern/spinlock.h>
 
 /* For debugging, so print_trapframe can distinguish between printing
  * a saved trapframe and printing the current trapframe and print some
@@ -195,15 +195,22 @@ trap_init_percpu(void) {
 
     /* Setup a TSS so that we get the right stack
      * when we trap to the kernel. */
-    ts.ts_rsp0 = KERN_STACK_TOP;
-    ts.ts_ist1 = KERN_PF_STACK_TOP;
+    uint8_t cpu_id = thiscpu->cpu_id;
+    struct Taskstate *ts = &thiscpu->cpu_ts;
+
+    ts->ts_rsp0 = KERN_STACK_TOP - (KERN_STACK_SIZE + KERN_STACK_GAP) * 2 * cpu_id;
+    ts->ts_ist1 = KERN_PF_STACK_TOP - (KERN_STACK_SIZE + KERN_STACK_GAP) * 2 * cpu_id;
+
+    // 3 is the size of struct Segdesc (selector).
+    uint16_t gdt_offset = GD_TSS0 + (cpu_id << 3);
+    uint16_t gdt_index = gdt_offset >> 3;
 
     /* Initialize the TSS slot of the gdt. */
-    *(volatile struct Segdesc64 *)(&gdt[(GD_TSS0 >> 3)]) = SEG64_TSS(STS_T64A, ((uint64_t)&ts), sizeof(struct Taskstate), 0);
+    *(volatile struct Segdesc64 *)(&gdt[gdt_index]) = SEG64_TSS(STS_T64A, ((uint64_t) ts), sizeof(struct Taskstate), 0);
 
     /* Load the TSS selector (like other segment selectors, the
      * bottom three bits are special; we leave them 0) */
-    ltr(GD_TSS0);
+    ltr(gdt_offset);
 
     /* Load the IDT */
     lidt(&idt_pd);
@@ -346,7 +353,7 @@ trap(struct Trapframe *tf) {
     /* Halt the CPU if some other CPU has called panic() */
     extern char *panicstr;
     if (panicstr) asm volatile("hlt");
-
+    smart_lock_kernel();
     /* Check that interrupts are disabled.  If this assertion
      * fails, DO NOT be tempted to fix it by inserting a "cli" in
      * the interrupt path */
@@ -394,23 +401,26 @@ trap(struct Trapframe *tf) {
         }
         if (!res) {
             in_page_fault = 0;
+            if ((tf->tf_cs & 3) == 3) {
+                smart_unlock_kernel();
+            }
             env_pop_tf(tf);
         }
     }
 
-    assert(curenv);
-
-    /* Copy trap frame (which is currently on the stack)
-     * into 'curenv->env_tf', so that running the environment
-     * will restart at the trap point */
-    curenv->env_tf = *tf;
-    /* The trapframe on the stack should be ignored from here on */
-    tf = &curenv->env_tf;
+    if (curenv){
+        /* Copy trap frame (which is currently on the stack)
+         * into 'curenv->env_tf', so that running the environment
+         * will restart at the trap point */
+        curenv->env_tf = *tf;
+        
+        /* The trapframe on the stack should be ignored from here on */
+        tf = &curenv->env_tf;
+    }
 
     /* Record that tf is the last real trapframe so
      * print_trapframe can print some additional information */
     last_tf = tf;
-
     /* Dispatch based on what type of trap occurred */
     trap_dispatch(tf);
 

@@ -12,6 +12,7 @@
 #include <kern/pmap.h>
 #include <kern/traceopt.h>
 #include <kern/trap.h>
+#include <kern/cpu.h>
 
 /*
  * Term "page" used here does not
@@ -32,8 +33,6 @@ static size_t free_desc_count;
 size_t max_memory_map_addr;
 /* Kernel address space */
 struct AddressSpace kspace;
-/* Currently active address spcae */
-struct AddressSpace *current_space;
 /* Root node of physical memory tree */
 struct Page root;
 /* Top address for page pools mappings */
@@ -1605,6 +1604,10 @@ detect_memory(void) {
         attach_region(0, max_memory_map_addr, ALLOCATABLE_NODE);
     }
 
+    /* Attach MPENTRY_PADDR page*/
+    extern unsigned char mpentry_start[], mpentry_end[];
+    attach_region(MPENTRY_PADDR,  MPENTRY_PADDR + mpentry_end - mpentry_start, RESERVED_NODE);
+
     if (trace_init) {
         cprintf("Physical memory: %zuM available, base = %zuK, extended = %zuK\n",
                 (size_t)((basemem + extmem) / MB), (size_t)(basemem / KB), (size_t)(extmem / KB));
@@ -1808,6 +1811,8 @@ init_memory(void) {
     /* Allocate kernel stacks */
 
     // LAB 7: Your code here
+    // itask
+    // Map per-CPU stacks starting at KSTACKTOP, for up to 'NCPU' CPUs.
     // Map [PADDR(bootstack), PADDR(bootstack) + KERN_STACK_SIZE] to [KERN_STACK_TOP - KERN_STACK_SIZE, KERN_STACK_TOP] as RW-
     // Map [PADDR(pfstack), PADDR(pfstack) + KERN_PF_STACK_SIZE] to [KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE, KERN_PF_STACK_TOP] as RW-
 
@@ -1818,6 +1823,31 @@ init_memory(void) {
     if (map_physical_region(&kspace, KERN_PF_STACK_TOP - KERN_PF_STACK_SIZE, PADDR(pfstack), KERN_PF_STACK_SIZE, PROT_R | PROT_W) < 0) {
         panic("Cannot map physical region at %p of size %lld", (void *)PADDR(pfstack), KERN_PF_STACK_SIZE);
     }
+
+    
+    //
+    // For CPU i, use the physical memory that 'percpu_kstacks[i]' refers
+    // to as its kernel stack. CPU i's kernel stack grows down from virtual
+    // address kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP), and is
+    // divided into two pieces, just like the single stack you set up in
+    // mem_init:
+    //     * [kstacktop_i - KSTKSIZE, kstacktop_i)
+    //          -- backed by physical memory
+    //     * [kstacktop_i - (KSTKSIZE + KSTKGAP), kstacktop_i - KSTKSIZE)
+    //          -- not backed; so if the kernel overflows its stack,
+    //             it will fault rather than overwrite another CPU's stack.
+    //             Known as a "guard page".
+    //     Permissions: kernel RW, user NONE
+    // Map kernel stacks for all CPUs
+    for (int cpuid = 0; cpuid < NCPU; ++cpuid) {
+        if (map_physical_region(&kspace, (KERN_STACK_TOP - cpuid * (KERN_STACK_SIZE + 2 * KERN_STACK_GAP + KERN_PF_STACK_SIZE)) - KERN_STACK_SIZE, PADDR(percpu_kstacks[cpuid]), KERN_STACK_SIZE, PROT_R | PROT_W) < 0) 
+            panic("Cannot map physical region at %p of size %lld", (void *)PADDR(percpu_kstacks[cpuid]), KERN_STACK_SIZE);
+        
+
+        if (map_physical_region(&kspace, (KERN_PF_STACK_TOP - cpuid * (KERN_STACK_SIZE + 2 * KERN_STACK_GAP + KERN_PF_STACK_SIZE)) - KERN_PF_STACK_SIZE, PADDR(percpu_pfstacks[cpuid]), KERN_PF_STACK_SIZE, PROT_R | PROT_W) < 0) 
+            panic("Cannot map physical region at %p of size %lld", (void *)PADDR(percpu_pfstacks[cpuid]), KERN_PF_STACK_SIZE);
+    }
+
 
 #ifdef SANITIZE_SHADOW_BASE
     init_shadow_pre();
