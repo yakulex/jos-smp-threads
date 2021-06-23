@@ -519,7 +519,7 @@ sys_kthread_create(void *entry, void *start, void *arg)
 
   // Use the same address space and pgfault handler
   int r;
-  if ((r = sys_map_region(sys_getenvid(), 0, tid, 0, MAX_USER_ADDRESS, PROT_ALL | PROT_LAZY | PROT_COMBINE)) < 0)
+  if ((r = sys_map_region(sys_getenvid(), 0, tid, 0, MAX_USER_ADDRESS, PROT_ALL & ~PROT_LAZY)) < 0)
         panic("map region fault: %i", r);
 
   if ((r = sys_env_set_pgfault_upcall(tid, curenv->env_pgfault_upcall)) < 0)
