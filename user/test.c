@@ -8,12 +8,10 @@
  * main program also exits
  *
  */
-
 #include <inc/lib.h>
 #include <inc/jthread.h>
 
 void *fun1(void *arg) {
-	cprintf("IN FUN 1");
 	int i = 1, j = *((int *)arg), k = 1, l;
 	while(i++ <= j) {
 		for(l = 0; l < 1000000; l++);
@@ -28,6 +26,7 @@ void *fun2(void *arg) {
 		for(l = 0; l < 1000000; l++);
 		cprintf("I am in function 2: k = %d\n", k++);
 	}
+	while(1){}
 	return NULL;
 }
 
@@ -37,26 +36,25 @@ void *fun3(void *arg) {
 		for(l = 0; l < 1000000; l++);
 		cprintf("I am in function 3: k = %d\n", k++);
 	}
-	return NULL;
+	return (void*)2;
 }
 
 void umain(int argc, char *argv[]) {
-	jthread_t t1; //, t2, t3;
+	jthread_t t1, t2, t3;
 	int repeat = 5;
-	// if(argc < 2) {
-	// 	printf("Usage: %s number_of_repeat\n", argv[0]);
-	// 	exit(0);
-	// }
+	int* return_value;
 	cprintf("creating thread 1\n");
 	jthread_create(&t1, NULL, fun1, &repeat);
-	// cprintf("creating thread 2\n");
-	// jthread_create(&t2, NULL, fun2, &repeat);
-	// cprintf("creating thread 3\n");
-	// jthread_create(&t3, NULL, fun3, &repeat);
-	// cprintf("calling join on t1\n");
+	cprintf("creating thread 2\n");
+	jthread_create(&t2, NULL, fun2, &repeat);
+	cprintf("creating thread 3\n");
+	jthread_cancel(t2);
+	jthread_create(&t3, NULL, fun3, &repeat);
+	cprintf("calling join on t1\n");
 	jthread_join(t1, NULL);
 	cprintf("calling join on t2\n");
-	// jthread_join(t2, NULL);
-	// cprintf("calling join on t3\n");
-	// jthread_join(t3, NULL);
+	jthread_join(t2, NULL);
+	cprintf("calling join on t3\n");
+	jthread_join(t3, (void*)&return_value);
+	cprintf("return_value: %ld\n", (uintptr_t)return_value);
 }

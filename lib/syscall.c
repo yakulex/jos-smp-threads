@@ -166,3 +166,9 @@ sys_kthread_exit(void *retval)
 {
   return syscall(SYS_kthread_exit, 0, (uintptr_t)retval, 0, 0, 0, 0, 0);
 }
+
+int
+sys_kthread_cancel(jthread_t tid)
+{
+  return syscall(SYS_kthread_cancel, 0, tid, 0, 0, 0, 0, 0);
+}

@@ -16,7 +16,7 @@
 #include <kern/traceopt.h>
 #include <kern/spinlock.h>
 
-#define DEBUGTHREAD 1
+#define DEBUGTHREAD 0
 
 /* Print a string to the system console.
  * The string is exactly 'len' characters long.
@@ -518,10 +518,6 @@ sys_kthread_create(void *entry, void *start, void *arg)
   next_thread->env_next_thread = e;
 
   // Use the same address space and pgfault handler
-
-  // if (map_region(&e->address_space, 0, &curenv->address_space, 0, MAX_USER_ADDRESS, PROT_ALL | PROT_USER_ | PROT_COMBINE)) 
-  //   panic("Cannot map physical region at %p of size %lud", (void *)0, (uintptr_t) MAX_USER_ADDRESS);
-  // e->env_pgfault_upcall = curenv->env_pgfault_upcall;
   int r;
   if ((r = sys_map_region(sys_getenvid(), 0, tid, 0, MAX_USER_ADDRESS, PROT_ALL | PROT_LAZY | PROT_COMBINE)) < 0)
         panic("map region fault: %i", r);
@@ -548,7 +544,6 @@ sys_kthread_create(void *entry, void *start, void *arg)
   // Second arg
   e->env_tf.tf_regs.reg_rsi = (uint64_t)arg;
 
-  //e->env_status = ENV_RUNNABLE;
   if ((r = sys_env_set_status(tid, ENV_RUNNABLE)) < 0)
         panic("sys_env_set_status: %i", r);
 
@@ -573,19 +568,18 @@ sys_kthread_join(jthread_t tid, void **retstore)
   int ret;
   if ((ret = envid2env(tid, &e, 0)) < 0)
     return ret;
-  if (e->env_thread_status != THREAD_ZOMBIE){
-    cprintf("not zombi\n");
+  if (e->env_thread_status != THREAD_ZOMBIE && e->env_thread_status != THREAD_CANCELLED){
     return -1;
   }
     
   // Check that we have permission to reap this thread
-  if (e->env_process_envid != curenv->env_process_envid)
+  if (e->env_process_envid != curenv->env_process_envid){
     return -1;
+  }
 
-  // Set retval in the calling env's vm space
-  // struct Page *page = page_lookup(e->address_space.root, (void *)retstore, 0, PARTIAL_NODE, 1);
-  // uint32_t *kva = (uint32_t *)(page2kva(page) + PAGE_OFFSET(retstore));
-  // *kva = (uint32_t)e->env_thread_retval;
+  // set retval
+  if (retstore) *retstore = e->env_thread_retval;
+  
 
   // Mark the env we reaped as done
 
@@ -611,6 +605,34 @@ sys_kthread_exit(void *retval)
     env_destroy(curenv);
   }
   return 0;
+}
+
+static int 
+sys_kthread_cancel(jthread_t tid){
+    if (DEBUGTHREAD)
+        cprintf("In jthread_cancel\n");
+    struct Env *e;
+    int ret;
+    if ((ret = envid2env(tid, &e, 0)) < 0)
+        return ret;
+    
+    // Check that we have permission to reap this thread
+    if (e->env_process_envid != curenv->env_process_envid){
+        return -1;
+    }
+
+    // Mark the env as CANCELED
+    if (e->env_child_thread){
+
+        e->env_thread_status = THREAD_CANCELLED;
+        e->env_thread_retval = NULL;
+        e->env_status = ENV_NOT_RUNNABLE;
+
+    } else {
+        env_destroy(e);
+    }
+
+    return 0;
 }
 
 /* Dispatches to the correct kernel function, passing the arguments. */
@@ -661,6 +683,8 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_kthread_join((jthread_t)a1, (void **)a2);
     } else if (syscallno == SYS_kthread_exit) {
         return sys_kthread_exit((void *)a1);
+    } else if (syscallno == SYS_kthread_cancel) {
+        return sys_kthread_cancel((jthread_t)a1);
     }
 
     return -E_NO_SYS;

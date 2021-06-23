@@ -6,17 +6,14 @@
 #include <inc/jthread.h>
 #include <inc/x86.h>
 
-#define DEBUG 1
+#define DEBUG 0
 
 void *
 jthread_main(void *(*start_routine)(void *), void *arg)
 {
   if (DEBUG)
     cprintf("In jthread_main\n");
-  cprintf("A\n");
-  cprintf("%08x\n", sys_getenvid());
   void *ret = start_routine(arg);
-  cprintf("A\n");
   jthread_exit(ret);
   // Should not reach here
   return NULL;
@@ -46,9 +43,7 @@ jthread_join(jthread_t th, void **thread_return)
   int ret = 0;
   while ((ret = sys_kthread_join(th, thread_return)) < 0)
   {
-    cprintf("sys_yield\n");
     sys_yield();
-    cprintf("after_sys\n");
   }
   return 0;
 }
@@ -57,6 +52,16 @@ void
 jthread_exit(void *retval)
 {
   sys_kthread_exit(retval);
+}
+
+int 
+jthread_cancel(jthread_t thread){
+  int ret = 0;
+  while ((ret = sys_kthread_cancel(thread)) < 0)
+  {
+    sys_yield();
+  }
+  return 0;
 }
 
 int

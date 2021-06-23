@@ -18,7 +18,8 @@ enum {
   THREAD_NOT_RUNNABLE = 0,
   THREAD_RUNNABLE,
   THREAD_ZOMBIE,
-  THREAD_DONE
+  THREAD_DONE,
+  THREAD_CANCELLED
 };
 
 // Basic threading instructions
@@ -32,6 +33,9 @@ jthread_join(jthread_t th,
              void **thread_return);
 void
 jthread_exit(void *retval);
+
+int
+jthread_cancel(jthread_t thread);
 
 // Mutex functions
 int

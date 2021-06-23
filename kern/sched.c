@@ -57,7 +57,7 @@ sched_halt(void) {
             envs[i].env_status == ENV_RUNNING) break;
     if (i == NENV) {
         cprintf("No runnable environments in the system!\n");
-        // for (;;) monitor(NULL);
+        for (;;) monitor(NULL);
     }
 
     /* Mark that no environment is running on CPU */

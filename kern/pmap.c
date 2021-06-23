@@ -2001,8 +2001,6 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm) {
     {
         struct Page* smallest_page = page_lookup_virtual(root, (uintptr_t)va, 0, 0);
         if (!smallest_page->phy || (smallest_page->state & PAGE_PROT(perm)) != PAGE_PROT(perm)) {
-            cprintf("%ld\n", (uintptr_t)smallest_page->addr);
-            cprintf("%p\n", va);
           user_mem_check_addr = (uintptr_t) MAX(va,va_b);
           return -E_FAULT;
         }
