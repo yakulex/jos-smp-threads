@@ -6,6 +6,8 @@
 #error "This is a JOS kernel header; user programs should not #include it"
 #endif
 
+#define MIN_ENV_TICKS 10;
 _Noreturn void sched_yield(void);
+void sched_decrease(void);
 
 #endif /* !JOS_KERN_SCHED_H */

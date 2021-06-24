@@ -3,9 +3,11 @@
 #include <kern/env.h>
 #include <kern/monitor.h>
 #include <kern/spinlock.h>
+#include <kern/sched.h>
 
 
 _Noreturn void sched_halt(void);
+void sched_update_ticks(void);
 
 /* Choose a user environment to run and run it */
 _Noreturn void
@@ -26,23 +28,68 @@ sched_yield(void) {
 
     // LAB 3: Your code here:
     int go = curenv ? ENVX(curenv_getid()) : 0;
-
+    int max_ticks = 0;
+    struct Env * next_env = curenv;
     for (int i = 0; i < NENV; ++i) {
         int cur = ENVX(i + go);
-        if (envs[cur].env_status == ENV_RUNNABLE) {
-            env_run(envs + cur);
+        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks) {
+            max_ticks = envs[cur].ticks;
+            next_env = envs + cur;
         }
     }
 
-    if (curenv && curenv->env_status == ENV_RUNNING) {
-        env_run(curenv);
+    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks) {
+        max_ticks = curenv->ticks;
+        next_env = curenv;
+    }
+    if (max_ticks > 0){
+        env_run(next_env);
+    }
+
+    sched_update_ticks();
+
+    go = curenv ? ENVX(curenv_getid()) : 0;
+    max_ticks = 0;
+    next_env = curenv;
+    for (int i = 0; i < NENV; ++i) {
+        int cur = ENVX(i + go);
+        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks) {
+            max_ticks = envs[cur].ticks;
+            next_env = envs + cur;
+        }
+    }
+
+    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks) {
+        max_ticks = curenv->ticks;
+        next_env = curenv;
+    }
+    if (max_ticks > 0){
+        env_run(next_env);
     }
 
     /* No runnable environments,
      * so just halt the cpu */
-    // cprintf("Halt\n"); 
     sched_halt(); 
 }
+
+void 
+sched_decrease(void) {
+    curenv->ticks--;
+}
+
+void
+sched_update_ticks(void){
+    int i;
+    for (i = 0; i < NENV; i++){
+        if (envs[i].env_status == ENV_RUNNABLE){
+            envs[i].ticks = envs[i].priority + MIN_ENV_TICKS;
+        }
+    }
+    if (curenv && curenv->env_status == ENV_RUNNING){
+        curenv->ticks = curenv->priority + MIN_ENV_TICKS;
+    }
+}
+
 
 /* Halt this CPU when there is nothing to do. Wait until the
  * timer interrupt wakes it up. This function never returns */
@@ -57,7 +104,7 @@ sched_halt(void) {
             envs[i].env_status == ENV_RUNNING) break;
     if (i == NENV) {
         cprintf("No runnable environments in the system!\n");
-        // for (;;) monitor(NULL);
+        for (;;) monitor(NULL);
     }
 
     /* Mark that no environment is running on CPU */

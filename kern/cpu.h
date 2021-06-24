@@ -8,7 +8,7 @@
 #include <inc/env.h>
 
 // Maximum number of CPUs
-#define NCPU  8
+#define NCPU  64
 
 // Values of status in struct Cpu
 enum {
