@@ -160,6 +160,8 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
 #endif
     env->env_status = ENV_RUNNABLE;
     env->env_runs = 0;
+    env->priority = 10;
+    env->ticks = 0;
 
     /* Clear out all the saved register state,
      * to prevent the register values

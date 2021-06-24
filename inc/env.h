@@ -92,6 +92,11 @@ struct Env {
   unsigned env_thread_status;    // Thread-specific status information
   void *env_thread_retval;       // Value that the thread is returning on thread_join
   int env_num_threads;           // Number of child threads this process has
+
+  // for scheduler
+  uint32_t ticks;
+  uint32_t priority;
+
 };
 
 #endif /* !JOS_INC_ENV_H */

@@ -318,6 +318,9 @@ trap_dispatch(struct Trapframe *tf) {
         // rtc_timer_pic_handle();
         timer_for_schedule->handle_interrupts();
         vsys[VSYS_gettime] = gettime();
+        if (curenv){
+            sched_decrease();
+        }
         lapic_eoi();
         sched_yield();
         return;
