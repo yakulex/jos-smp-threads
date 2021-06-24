@@ -365,7 +365,7 @@ trap(struct Trapframe *tf) {
     /* #PF should be handled separately */
     if (tf->tf_trapno == T_PGFLT) {
         assert(current_space);
-        assert(!in_page_fault);
+        // assert(!in_page_fault);
         in_page_fault = 1;
 
         uintptr_t va = rcr2();

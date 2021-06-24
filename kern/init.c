@@ -173,6 +173,11 @@ i386_init(void) {
     // Starting non-boot CPUs
     boot_aps();
 
+    // Should always have idle processes at first.
+    int i;
+    for (i = 0; i < ncpu; i++)
+        ENV_CREATE(user_idle, ENV_TYPE_IDLE);
+
 #ifdef CONFIG_KSPACE
     /* Touch all you want */
     ENV_CREATE_KERNEL_TYPE(prog_test1);
