@@ -20,7 +20,7 @@ void *fun1(void *arg) {
 	}
 	return NULL;
 }
-
+ 
 void *fun2(void *arg) {
 	int i = 1, j = *((int *)arg), k = 1, l;
 	a+=1;

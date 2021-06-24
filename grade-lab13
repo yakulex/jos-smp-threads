@@ -1,0 +1,39 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+
+import re
+from gradelib import *
+
+r = Runner(save("jos.out"),
+           stop_breakpoint("readline"))
+
+
+
+@test(50)
+def test_mutex_lock():
+    r.user_test("lock", make_args=["CPUS=4"])
+    r.match('umain: creating thread',
+            'acquire_and_hold: getting resource',
+            'acquire_and_hold: r.lock.locked: true',
+            'umain: trying to acquire resource',
+            'resource value is 100',
+            'acquire_and_hold: releasing resource',
+            'umain: acquired resource!',
+            'umain: resource value is 110')
+
+
+@test(50)
+def test_thread():
+    r.user_test("test", make_args=["CPUS=4"])
+    r.match('creating thread 1.1',
+            'creating thread 2',
+            'I am in function 1: k = 4',
+            'I am in function 3: k = 2',
+            'calling join on t1',
+            'calling join on t2',
+            'calling join on t3',
+            'calling join on t4',
+            'return_value: 2',
+            'a not thread_local 4')
+
+run_tests()
