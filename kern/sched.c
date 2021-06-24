@@ -29,7 +29,7 @@ sched_yield(void) {
 
     for (int i = 0; i < NENV; ++i) {
         int cur = ENVX(i + go);
-        if (envs[cur].env_type != ENV_TYPE_IDLE && envs[cur].env_status == ENV_RUNNABLE) {
+        if (envs[cur].env_status == ENV_RUNNABLE) {
             env_run(envs + cur);
         }
     }
@@ -57,24 +57,20 @@ sched_halt(void) {
             envs[i].env_status == ENV_RUNNING) break;
     if (i == NENV) {
         cprintf("No runnable environments in the system!\n");
-        for (;;) monitor(NULL);
+        // for (;;) monitor(NULL);
     }
-    struct Env *idle = &envs[cpunum()];
-    if (!(idle->env_status == ENV_RUNNABLE || idle->env_status == ENV_RUNNING))
-        panic("CPU %d: No idle environment!", cpunum());
-    env_run(idle);
+
     /* Mark that no environment is running on CPU */
-    // curenv = NULL;
-    // smart_unlock_kernel();
-    
-    // /* Reset stack pointer, enable interrupts and then halt */
-    // asm volatile(
-    //         "movq $0, %%rbp\n"
-    //         "movq %0, %%rsp\n"
-    //         "pushq $0\n"
-    //         "pushq $0\n"
-    //         "sti\n"
-    //         "hlt\n" ::"a"(thiscpu->cpu_ts.ts_rsp0));
+    curenv = NULL;
+    smart_unlock_kernel();
+    /* Reset stack pointer, enable interrupts and then halt */
+    asm volatile(
+            "movq $0, %%rbp\n"
+            "movq %0, %%rsp\n"
+            "pushq $0\n"
+            "pushq $0\n"
+            "sti\n"
+            "hlt\n" ::"a"(thiscpu->cpu_ts.ts_rsp0));
 
     /* Unreachable */
     for (;;)

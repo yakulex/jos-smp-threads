@@ -318,6 +318,7 @@ trap_dispatch(struct Trapframe *tf) {
         // rtc_timer_pic_handle();
         timer_for_schedule->handle_interrupts();
         vsys[VSYS_gettime] = gettime();
+        lapic_eoi();
         sched_yield();
         return;
         /* Handle keyboard and serial interrupts. */
@@ -325,11 +326,13 @@ trap_dispatch(struct Trapframe *tf) {
     case  IRQ_OFFSET+IRQ_KBD:
         kbd_intr();
         pic_send_eoi(IRQ_KBD);
+        lapic_eoi();
         sched_yield();
         return;
     case IRQ_OFFSET+IRQ_SERIAL:
         serial_intr();
         pic_send_eoi(IRQ_SERIAL);
+        lapic_eoi();
         sched_yield();
         return;
     default:
@@ -365,7 +368,7 @@ trap(struct Trapframe *tf) {
     /* #PF should be handled separately */
     if (tf->tf_trapno == T_PGFLT) {
         assert(current_space);
-        // assert(!in_page_fault);
+        assert(!in_page_fault);
         in_page_fault = 1;
 
         uintptr_t va = rcr2();
