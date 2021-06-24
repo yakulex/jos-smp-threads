@@ -32,17 +32,21 @@ sched_yield(void) {
     struct Env * next_env = curenv;
     for (int i = 0; i < NENV; ++i) {
         int cur = ENVX(i + go);
-        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks) {
+        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks && (envs[cur].affinity_mask & 1ULL << cpunum())) {
+            cprintf("b %d %lu %llu %llu\n", envs[cur].env_id, envs[cur].affinity_mask, 1ULL << cpunum(), envs[cur].affinity_mask & 1ULL << cpunum());
             max_ticks = envs[cur].ticks;
             next_env = envs + cur;
         }
     }
 
-    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks) {
+    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks && (curenv->affinity_mask & 1ULL << cpunum())) {
+        cprintf("b %d %lu %llu %llu\n", curenv->env_id, curenv->affinity_mask, 1ULL << cpunum(), curenv->affinity_mask & 1ULL << cpunum());
+        
         max_ticks = curenv->ticks;
         next_env = curenv;
     }
     if (max_ticks > 0){
+        cprintf("A%lu\n", next_env->affinity_mask);
         env_run(next_env);
     }
 
@@ -53,22 +57,27 @@ sched_yield(void) {
     next_env = curenv;
     for (int i = 0; i < NENV; ++i) {
         int cur = ENVX(i + go);
-        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks) {
+        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks && (envs[cur].affinity_mask & 1ULL << cpunum())) {
+            cprintf("b %d %lu %llu %llu\n", envs[cur].env_id, envs[cur].affinity_mask, 1ULL << cpunum(), envs[cur].affinity_mask & 1ULL << cpunum());
             max_ticks = envs[cur].ticks;
             next_env = envs + cur;
         }
     }
 
-    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks) {
+    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks && (curenv->affinity_mask & 1ULL << cpunum())) {
+        cprintf("b %d %lu %llu %llu\n", curenv->env_id, curenv->affinity_mask, 1ULL << cpunum(), curenv->affinity_mask & 1ULL << cpunum());
+        
         max_ticks = curenv->ticks;
         next_env = curenv;
     }
     if (max_ticks > 0){
+        cprintf("A%lu\n", next_env->affinity_mask);
         env_run(next_env);
     }
 
     /* No runnable environments,
      * so just halt the cpu */
+    cprintf("num cpu halt %d\n", cpunum());
     sched_halt(); 
 }
 

@@ -14,6 +14,13 @@ void *fun1(void *arg) {
 	a+=1;
 	b+=1;
 	cprintf("func1 b = %d\n", b);
+	jthread_setcpu(thisenv->env_id, 2);
+	cprintf("\nnaffin mask %ld\n\n", thisenv->affinity_mask);
+	cprintf("\nnumber cpu before sys in fun1 %d\n\n", thisenv->cpunum);
+	sys_yield();
+	cprintf("\nnumber cpu in fun1 %d\n\n", thisenv->cpunum);
+	cprintf("\nenvId in fun1 %d\n\n", thisenv->env_id);
+	cprintf("\nnaffin mask %ld\n\n", thisenv->affinity_mask);
 	while(i++ <= j) {
 		for(l = 0; l < 1000000; l++);
 		cprintf("I am in function 1: k = %d\n", k++);
@@ -47,13 +54,13 @@ void *fun3(void *arg) {
 }
 
 void umain(int argc, char *argv[]) {
-	jthread_t t1, t2, t3, t4;
+	jthread_t t1, t2, t3;//, t4;
 	int repeat = 5;
 	int* return_value;
 	cprintf("creating thread 1\n");
 	jthread_create(&t1, NULL, fun1, &repeat);
 	cprintf("creating thread 1.1\n");
-	jthread_create(&t4, NULL, fun1, &repeat);
+	//jthread_create(&t4, NULL, fun1, &repeat);
 	cprintf("creating thread 2\n");
 	jthread_create(&t2, NULL, fun2, &repeat);
 	cprintf("creating thread 3\n");
@@ -66,7 +73,7 @@ void umain(int argc, char *argv[]) {
 	cprintf("calling join on t3\n");
 	jthread_join(t3, (void*)&return_value);
 	cprintf("calling join on t4\n");
-	jthread_join(t4, NULL);
+	//jthread_join(t4, NULL);
 	cprintf("return_value: %ld\n", (uintptr_t)return_value);
 	cprintf("a not thread_local %d\n", a);
 	cprintf("b thread_local %d\n", b);

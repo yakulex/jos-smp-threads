@@ -64,6 +64,14 @@ jthread_cancel(jthread_t thread){
   return 0;
 }
 
+int 
+jthread_setcpu(jthread_t thread, int cpunum){
+  int ret = 0;
+  ret = sys_kthread_setaffinity(thread, 1ULL << cpunum);
+  return ret;
+}
+
+
 int
 jthread_mutex_lock(jthread_mutex_t *mutex)
 {

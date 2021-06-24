@@ -212,6 +212,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
     env->env_thread_retval = NULL;
     env->env_thread_status = THREAD_NOT_RUNNABLE;
     env->env_num_threads = 0;
+    env->affinity_mask = -1ULL >> (64 - ncpu);
 
     /* Commit the allocation */
     env_free_list = env->env_link;
@@ -545,7 +546,9 @@ env_run(struct Env *env) {
     curenv = env;
     curenv->env_status = ENV_RUNNING;
     curenv->env_runs += 1;
+    curenv->cpunum = cpunum();
     switch_address_space(&(curenv->address_space));
+    cprintf("c %d %lu %llu %llu\n", curenv->env_id, curenv->affinity_mask, 1ULL << cpunum(), curenv->affinity_mask & 1ULL << cpunum());
     smart_unlock_kernel();
     env_pop_tf(&curenv->env_tf);
 

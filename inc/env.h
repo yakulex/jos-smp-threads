@@ -92,6 +92,8 @@ struct Env {
   unsigned env_thread_status;    // Thread-specific status information
   void *env_thread_retval;       // Value that the thread is returning on thread_join
   int env_num_threads;           // Number of child threads this process has
+  volatile uint64_t affinity_mask;        // Mask for CPU affinity
+  volatile int cpunum;
 
   // for scheduler
   uint32_t ticks;

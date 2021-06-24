@@ -37,6 +37,9 @@ jthread_exit(void *retval);
 int
 jthread_cancel(jthread_t thread);
 
+int 
+jthread_setcpu(jthread_t thread, int cpunum);
+
 // Mutex functions
 int
 jthread_mutex_lock(jthread_mutex_t *mutex);

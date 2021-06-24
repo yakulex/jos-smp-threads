@@ -23,6 +23,7 @@ enum {
     SYS_kthread_join,
     SYS_kthread_exit,
     SYS_kthread_cancel,
+    SYS_kthread_setaffinity,
     NSYSCALLS
 };
 
