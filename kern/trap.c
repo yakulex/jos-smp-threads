@@ -316,7 +316,7 @@ trap_dispatch(struct Trapframe *tf) {
         // LAB 5: Your code here
         // LAB 4: Your code here
         // rtc_timer_pic_handle();
-        timer_for_schedule->handle_interrupts();
+        // timer_for_schedule->handle_interrupts();
         vsys[VSYS_gettime] = gettime();
         if (curenv){
             sched_decrease();

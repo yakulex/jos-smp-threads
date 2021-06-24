@@ -163,7 +163,7 @@ i386_init(void) {
     lapic_init();
 
     /* Choose the timer used for scheduling: hpet or pit */
-    timers_schedule("hpet0");
+    // timers_schedule("hpet0");
     clock_idt_init();
 
     // Acquire the big kernel lock before waking up APs
