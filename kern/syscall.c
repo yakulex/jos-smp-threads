@@ -648,11 +648,8 @@ sys_kthread_setaffinity(jthread_t tid, uint64_t mask) {
     if (e->env_process_envid != curenv->env_process_envid) {
         return -1;
     }
-    cprintf("%lu\n", mask);
-    cprintf("\n%llu\n\n", -1ULL >> (64 - ncpu));
 
     if (!(-1ULL >> (64 - ncpu) & mask)) {
-        cprintf("not proper mask");
         return -1;
     }
 

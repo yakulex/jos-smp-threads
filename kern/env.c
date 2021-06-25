@@ -20,6 +20,7 @@
 #include <kern/vsyscall.h>
 #include <kern/spinlock.h>
 #include <inc/jthread.h>
+#include <kern/sched.h>
 
 #ifdef CONFIG_KSPACE
 /* All environments */
@@ -160,7 +161,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
 #endif
     env->env_status = ENV_RUNNABLE;
     env->env_runs = 0;
-    env->priority = 10;
+    env->priority = DEFAULT_PRIORITY;
     env->ticks = 0;
 
     /* Clear out all the saved register state,
@@ -548,7 +549,7 @@ env_run(struct Env *env) {
     curenv->env_runs += 1;
     curenv->cpunum = cpunum();
     switch_address_space(&(curenv->address_space));
-    cprintf("c %d %lu %llu %llu\n", curenv->env_id, curenv->affinity_mask, 1ULL << cpunum(), curenv->affinity_mask & 1ULL << cpunum());
+    // cprintf("c %d %lu %llu %llu\n", curenv->env_id, curenv->affinity_mask, 1ULL << cpunum(), curenv->affinity_mask & 1ULL << cpunum());
     smart_unlock_kernel();
     env_pop_tf(&curenv->env_tf);
 

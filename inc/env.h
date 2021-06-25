@@ -96,7 +96,7 @@ struct Env {
   volatile int cpunum;
 
   // for scheduler
-  uint32_t ticks;
+  int ticks;
   uint32_t priority;
 
 };

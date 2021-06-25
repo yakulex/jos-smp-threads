@@ -10,17 +10,18 @@ int a = 0;
 int b = 0;
 
 void *fun1(void *arg) {
+	const volatile struct Env * fun1env = &envs[ENVX(sys_getenvid())];
 	int i = 1, j = *((int *)arg), k = 1, l;
 	a+=1;
 	b+=1;
 	cprintf("func1 b = %d\n", b);
-	jthread_setcpu(thisenv->env_id, 2);
-	cprintf("\nnaffin mask %ld\n\n", thisenv->affinity_mask);
-	cprintf("\nnumber cpu before sys in fun1 %d\n\n", thisenv->cpunum);
+	jthread_setcpu(sys_getenvid(), 2);
+	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
+	cprintf("\nnumber cpu before sys in fun1 %d\n\n", fun1env->cpunum);
 	sys_yield();
 	cprintf("\nnumber cpu in fun1 %d\n\n", thisenv->cpunum);
-	cprintf("\nenvId in fun1 %d\n\n", thisenv->env_id);
-	cprintf("\nnaffin mask %ld\n\n", thisenv->affinity_mask);
+	cprintf("\nenvId in fun1 %d %d\n\n", sys_getenvid(), fun1env->env_id);
+	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
 	while(i++ <= j) {
 		for(l = 0; l < 1000000; l++);
 		cprintf("I am in function 1: k = %d\n", k++);
