@@ -77,7 +77,7 @@ jthread_mutex_lock(jthread_mutex_t *mutex)
 {
   while (xchg((uint32_t *)&mutex->locked, 1) != 0)
     asm volatile ("pause");
-  mutex->owner = thisenv->env_id;
+  mutex->owner = envs[ENVX(sys_getenvid())].env_id;
   return 0;
 }
 
@@ -92,7 +92,7 @@ jthread_mutex_trylock(jthread_mutex_t *mutex)
 int
 jthread_mutex_unlock(jthread_mutex_t *mutex)
 {
-  if (mutex->owner != thisenv->env_id)
+  if (mutex->owner != envs[ENVX(sys_getenvid())].env_id)
     return -1;
   xchg((uint32_t *)&mutex->locked, 0);
   return 0;
