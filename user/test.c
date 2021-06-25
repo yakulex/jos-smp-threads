@@ -19,7 +19,7 @@ void *fun1(void *arg) {
 	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
 	cprintf("\nnumber cpu before sys in fun1 %d\n\n", fun1env->cpunum);
 	sys_yield();
-	cprintf("\nnumber cpu in fun1 %d\n\n", thisenv->cpunum);
+	cprintf("\nnumber cpu in fun1 %d\n\n", fun1env->cpunum);
 	cprintf("\nenvId in fun1 %d %d\n\n", sys_getenvid(), fun1env->env_id);
 	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
 	while(i++ <= j) {
