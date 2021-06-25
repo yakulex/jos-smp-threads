@@ -433,8 +433,9 @@ trap(struct Trapframe *tf) {
     /* If we made it to this point, then no other environment was
      * scheduled, so we should return to the current environment
      * if doing so makes sense */
-    if (curenv && curenv->env_status == ENV_RUNNING)
+    if (curenv && curenv->env_status == ENV_RUNNING && (curenv->affinity_mask & 1ULL << cpunum())){
         env_run(curenv);
+    }
     else
         sched_yield();
 }

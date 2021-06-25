@@ -28,17 +28,17 @@ sched_yield(void) {
 
     // LAB 3: Your code here:
     int go = curenv ? ENVX(curenv_getid()) : 0;
-    int max_ticks = 0;
+    int max_ticks = -1;
     struct Env * next_env = curenv;
     for (int i = 0; i < NENV; ++i) {
         int cur = ENVX(i + go);
-        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks) {
+        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks && (envs[cur].affinity_mask & 1ULL << cpunum())) {
             max_ticks = envs[cur].ticks;
             next_env = envs + cur;
         }
     }
 
-    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks) {
+    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks && (curenv->affinity_mask & 1ULL << cpunum())) {        
         max_ticks = curenv->ticks;
         next_env = curenv;
     }
@@ -46,27 +46,30 @@ sched_yield(void) {
         env_run(next_env);
     }
 
-    sched_update_ticks();
+    if (max_ticks == 0){
+        sched_update_ticks();
 
-    go = curenv ? ENVX(curenv_getid()) : 0;
-    max_ticks = 0;
-    next_env = curenv;
-    for (int i = 0; i < NENV; ++i) {
-        int cur = ENVX(i + go);
-        if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks) {
-            max_ticks = envs[cur].ticks;
-            next_env = envs + cur;
+        go = curenv ? ENVX(curenv_getid()) : 0;
+        max_ticks = 0;
+        next_env = curenv;
+        for (int i = 0; i < NENV; ++i) {
+            int cur = ENVX(i + go);
+            if (envs[cur].env_status == ENV_RUNNABLE && envs[cur].ticks > max_ticks && (envs[cur].affinity_mask & 1ULL << cpunum())) {
+                max_ticks = envs[cur].ticks;
+                next_env = envs + cur;
+            }
+        }
+
+        if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks && (curenv->affinity_mask & 1ULL << cpunum())) {            
+            max_ticks = curenv->ticks;
+            next_env = curenv;
+        }
+        if (max_ticks > 0){
+            env_run(next_env);
         }
     }
-
-    if (curenv && curenv->env_status == ENV_RUNNING && curenv->ticks > max_ticks) {
-        max_ticks = curenv->ticks;
-        next_env = curenv;
-    }
-    if (max_ticks > 0){
-        env_run(next_env);
-    }
-
+    if (curenv && curenv->env_status == ENV_RUNNING)
+        curenv->env_status = ENV_RUNNABLE;
     /* No runnable environments,
      * so just halt the cpu */
     sched_halt(); 

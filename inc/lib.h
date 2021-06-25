@@ -103,6 +103,7 @@ jthread_t sys_kthread_create(void *jthread_main, void *start_routine, void *arg)
 int sys_kthread_join(jthread_t tid, void **retstore);
 int sys_kthread_exit(void *retval);
 int sys_kthread_cancel(jthread_t tid);
+int sys_kthread_setaffinity(jthread_t tid, uint64_t mask);
 // int sys_kthread_mutex_lock(jthread_mutex_t *mutex);
 // int sys_kthread_mutex_unlock(jthread_mutex_t *mutex);
 

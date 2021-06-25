@@ -637,6 +637,29 @@ sys_kthread_cancel(jthread_t tid){
     return 0;
 }
 
+static int 
+sys_kthread_setaffinity(jthread_t tid, uint64_t mask) {
+    if (DEBUGTHREAD)
+        cprintf("In kthread_setaffinity\n");
+    struct Env *e;
+    int ret;
+    if ((ret = envid2env(tid, &e, 0)) < 0)
+        return ret;
+    
+    // Check that we have permission to reap this thread
+    if (e->env_process_envid != curenv->env_process_envid) {
+        return -1;
+    }
+
+    if (!(-1ULL >> (64 - ncpu) & mask)) {
+        return -1;
+    }
+
+     e->affinity_mask = mask;
+
+     return 0;
+}
+
 /* Dispatches to the correct kernel function, passing the arguments. */
 uintptr_t
 syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t a4, uintptr_t a5, uintptr_t a6) {
@@ -687,6 +710,8 @@ syscall(uintptr_t syscallno, uintptr_t a1, uintptr_t a2, uintptr_t a3, uintptr_t
         return sys_kthread_exit((void *)a1);
     } else if (syscallno == SYS_kthread_cancel) {
         return sys_kthread_cancel((jthread_t)a1);
+    } else if (syscallno == SYS_kthread_setaffinity) {
+        return sys_kthread_setaffinity((jthread_t)a1, (uint64_t)a2);
     }
 
     return -E_NO_SYS;
