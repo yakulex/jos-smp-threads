@@ -5,6 +5,7 @@
  */
 #include <inc/lib.h>
 #include <inc/jthread.h>
+#include <inc/errno.h>
 
 int a = 0;
 __thread struct Trapframe trp1[1000]; // testing huge amount of memory in tls
@@ -105,4 +106,7 @@ void umain(int argc, char *argv[]) {
 	cprintf("e thread_local %ld\n", e);
 	cprintf("f thread_local %ld\n", f);
 	cprintf("g thread_local %ld\n", g);
+
+	cprintf("error from create = %d\n", jthread_create(&t1, NULL, NULL, &repeat));
+	cprintf("errno = %d\n", errno);
 }

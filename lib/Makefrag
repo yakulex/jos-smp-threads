@@ -28,7 +28,8 @@ LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/pipe.c \
 			lib/wait.c \
 			lib/uvpt.c \
-			lib/jthread.c
+			lib/jthread.c \
+			lib/errno.c 
 
 LIB_SRCFILES :=		$(LIB_SRCFILES) \
 			lib/vsyscall.c
