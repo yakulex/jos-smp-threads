@@ -36,7 +36,7 @@ void *fun1(void *arg) {
 	cprintf("\nnumber cpu in fun1 %d\n\n", thisenv->cpunum);
 	cprintf("\nenvId in fun1 %d %d\n\n", sys_getenvid(), fun1env->env_id);
 	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
-	cprintf("a not thread_local in fun1 %d\n", a); // 12
+	cprintf("a not thread_local in fun1 %d\n", a); // 7
 	cprintf("b thread_local in fun1 %ld\n", b);
 	while(i++ <= j) {
 		for(l = 0; l < 1000000; l++);
@@ -98,7 +98,7 @@ void umain(int argc, char *argv[]) {
 	cprintf("calling join on t4\n");
 	jthread_join(t4, NULL);
 	cprintf("return_value: %ld\n", (uintptr_t)return_value);
-	cprintf("a not thread_local %d\n", a); // 12
+	cprintf("a not thread_local %d\n", a); // 7
 	// must be same
 	cprintf("b thread_local %ld\n", b);
 	cprintf("d thread_local %ld\n", d);
