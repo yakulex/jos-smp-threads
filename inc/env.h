@@ -30,8 +30,6 @@ typedef int32_t envid_t;
 #define NENV        (1 << LOG2NENV)
 #define ENVX(envid) ((envid) & (NENV - 1))
 
-#define NSTACKPAGES 3  // Number of pages to give to each stack
-
 /* Values of env_status in struct Env */
 enum {
     ENV_FREE,
@@ -59,6 +57,14 @@ struct AddressSpace {
     struct Page *root; /* root node of address space tree */
 };
 
+struct EnvTLS {
+    struct EnvTLS *self;
+    void * tls_master_mmap;
+    size_t tls_master_size;
+    size_t tls_master_align;
+    void * tls_mmap;
+    size_t tls_size;
+};
 
 struct Env {
     struct Trapframe env_tf; /* Saved registers */
@@ -98,6 +104,10 @@ struct Env {
   // for scheduler
   int ticks;
   uint32_t priority;
+
+  // Thread local storage
+  struct EnvTLS *env_tls;
+
 
 };
 

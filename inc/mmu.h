@@ -141,6 +141,7 @@
 
 /* x86_64 related changes */
 #define EFER_MSR 0xC0000080
+#define FS_MSR   0xC0000100
 #define EFER_LME (1ULL << 8)
 #define EFER_LMA (1ULL << 10)
 #define EFER_NXE (1ULL << 11)

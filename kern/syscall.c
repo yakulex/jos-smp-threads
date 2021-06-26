@@ -521,7 +521,7 @@ sys_kthread_create(void *entry, void *start, void *arg)
 
   // Use the same address space and pgfault handler
   int r;
-  if ((r = sys_map_region(sys_getenvid(), 0, tid, 0, MAX_USER_ADDRESS, PROT_ALL & ~PROT_LAZY)) < 0)
+  if ((r = sys_map_region(curenv->env_id, 0, tid, 0, MAX_USER_ADDRESS, PROT_ALL & ~PROT_LAZY)) < 0)
         panic("map region fault: %i", r);
 
   if ((r = sys_env_set_pgfault_upcall(tid, curenv->env_pgfault_upcall)) < 0)
@@ -529,15 +529,46 @@ sys_kthread_create(void *entry, void *start, void *arg)
 
   // Allocate new stack
 
-  uintptr_t va = (uintptr_t)(USER_STACK_TOP - (threadnum * (USER_STACK_SIZE + PAGE_SIZE) + USER_STACK_SIZE));
-  int perm = PROT_RWX | PROT_USER_ | ALLOC_ZERO;
-  if (map_region(&e->address_space, va, NULL, 0, USER_STACK_SIZE, perm))
-    panic("Cannot map physical region at %p of size %lu", (void *)va, (uintptr_t) USER_STACK_SIZE);
+    uintptr_t va = (uintptr_t)(USER_STACK_TOP - (threadnum * (USER_STACK_SIZE + PAGE_SIZE) + USER_STACK_SIZE));
+    int perm = PROT_RWX | PROT_USER_ | ALLOC_ZERO;
+    if (map_region(&e->address_space, va, NULL, 0, USER_STACK_SIZE, perm))
+        panic("Cannot map physical region at %p of size %lu", (void *)va, (uintptr_t) USER_STACK_SIZE);
 
-  if (DEBUGTHREAD)
-    cprintf("New page mapped at va:0x%08lx\n", va);
+    if (DEBUGTHREAD)
+        cprintf("New page mapped at va:0x%08lx\n", va);
+    
+    if (curenv->env_tls){
+        size_t master_tls_size = curenv->env_tls->tls_master_size;
+        size_t master_tls_size_aligned = -(-master_tls_size & ~(curenv->env_tls->tls_master_align-1));
+        size_t tls_size = master_tls_size_aligned + sizeof(struct EnvTLS);
+        size_t envtls_struct_offset = master_tls_size_aligned;
 
-  // Set the eip and esp to the new values
+        size_t page_size_of_tls = ROUNDUP(tls_size, PAGE_SIZE);
+        uintptr_t tls_va = ROUNDDOWN((uintptr_t)curenv->env_tls->tls_master_mmap, PAGE_SIZE) - page_size_of_tls * threadnum - tls_size;
+        int perm = PROT_R | PROT_W | PROT_USER_ | ALLOC_ZERO;
+        if (map_region(&e->address_space, ROUNDDOWN(tls_va, PAGE_SIZE), NULL, 0, page_size_of_tls, perm))
+            panic("Cannot map physical region at %p of size %lu", (void *)tls_va, (uintptr_t) page_size_of_tls);
+
+        // cprintf("master tls 0x%08lx\n", master_tls_size);
+        
+        struct AddressSpace *curr_asp = switch_address_space(&e->address_space);
+        memcpy((void *)tls_va, curenv->env_tls->tls_master_mmap, master_tls_size);
+        struct EnvTLS *env_tls = (struct EnvTLS *) (tls_va + envtls_struct_offset);
+        env_tls->self = env_tls;
+        env_tls->tls_master_mmap = curenv->env_tls->tls_master_mmap;
+        env_tls->tls_master_size = master_tls_size;
+        env_tls->tls_master_align = curenv->env_tls->tls_master_align;
+        env_tls->tls_mmap = (void *)tls_va;
+        env_tls->tls_size = tls_size;
+
+        e->env_tls = env_tls;
+        e->env_tf.tf_fsbase = (uint64_t)e->env_tls;
+        switch_address_space(curr_asp);
+
+    }
+
+  
+  // Set the rip and rsp to the new values
   e->env_tf.tf_rip = (uintptr_t)entry;
   e->env_tf.tf_rsp = (uintptr_t)(va + USER_STACK_SIZE);
 

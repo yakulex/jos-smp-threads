@@ -67,6 +67,7 @@ struct PushRegs {
 } __attribute__((packed));
 
 struct Trapframe {
+    uint64_t tf_fsbase;
     struct PushRegs tf_regs;
     uint16_t tf_es;
     uint16_t tf_padding1;

@@ -166,6 +166,8 @@
 #define USER_STACK_TOP (USER_EXCEPTION_STACK_TOP - USER_EXCEPTION_STACK_SIZE - PAGE_SIZE)
 /* Stack size (variable) */
 #define USER_STACK_SIZE (16 * PAGE_SIZE)
+/* Address for master copy of thread local storage */
+#define MASTER_TLS_TOP (USER_STACK_TOP - (NENV * (USER_STACK_SIZE + PAGE_SIZE)))
 /* Max number of open files in the file system at once */
 #define MAXOPEN   512
 #define FILE_BASE 0x200000000
