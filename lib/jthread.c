@@ -1,10 +1,8 @@
-// JOS Threading
-// Hugh O'Cinneide
-// November 2014
-
 #include <inc/lib.h>
 #include <inc/jthread.h>
 #include <inc/x86.h>
+#include <inc/errno.h>
+#include <inc/error.h>
 
 #define DEBUG 0
 
@@ -26,11 +24,11 @@ jthread_create(jthread_t *thread,
                void *arg)
 {
   if (start_routine == NULL || thread == NULL)
-    return -1;
+    return errno = E_INVAL, -E_INVAL; //smth like this, errno = 3, func returns -3
 
   jthread_t tid;
   if ((tid = sys_kthread_create((void *)jthread_main, (void *)start_routine, arg)) < 0)
-    return -1;
+    return errno = -tid, tid;
   *thread = tid;
   
 
@@ -41,9 +39,12 @@ int
 jthread_join(jthread_t th, void **thread_return)
 {
   int ret = 0;
-  while ((ret = sys_kthread_join(th, thread_return)) < 0)
+  while ((ret = sys_kthread_join(th, thread_return)) < 0) 
   {
-    sys_yield();
+    errno = -ret;
+    if ((errno == E_NOT_IN_PROP_PROC || errno == E_NOT_ZOMB_OR_CANC))
+      sys_yield();
+    else return ret;
   }
   return 0;
 }
@@ -56,19 +57,14 @@ jthread_exit(void *retval)
 
 int 
 jthread_cancel(jthread_t thread){
-  int ret = 0;
-  while ((ret = sys_kthread_cancel(thread)) < 0)
-  {
-    sys_yield();
-  }
-  return 0;
+  int ret = sys_kthread_cancel(thread);
+  return errno = -ret, ret;
 }
 
 int 
 jthread_setcpu(jthread_t thread, int cpunum){
-  int ret = 0;
-  ret = sys_kthread_setaffinity(thread, 1ULL << cpunum);
-  return ret;
+  int ret = sys_kthread_setaffinity(thread, 1ULL << cpunum);
+  return errno = -ret, ret;
 }
 
 
@@ -85,7 +81,7 @@ int
 jthread_mutex_trylock(jthread_mutex_t *mutex)
 {
   if (xchg((uint32_t *)&mutex->locked, 1) != 0)
-    return -1;
+    return errno = E_UNSPECIFIED, -E_UNSPECIFIED;
   return 0;
 }
 

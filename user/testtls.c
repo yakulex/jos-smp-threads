@@ -1,7 +1,5 @@
 /*
- * this program tests if the thread are being created and run
- * normally
- *
+ * this program tests if the thread local storage is working normally
  */
 #include <inc/lib.h>
 #include <inc/jthread.h>
@@ -14,31 +12,22 @@ __thread uint64_t d;
 __thread uint64_t e = 0;
 __thread uint64_t f = 2;
 __thread uint64_t g = 2;
-// __thread struct Env c;
 
 void *fun1(void *arg) {
-	const volatile struct Env * fun1env = &envs[ENVX(sys_getenvid())];
 	int i = 1, j = *((int *)arg), k = 1, l;
 	a+=1;
 	b+=1;
 	d+=1;
 	e+=1;
 	f+=1;
+	g+=1;
 	cprintf("b thread_local f1 %ld\n", b); // 6
 	cprintf("d thread_local f1 %ld\n", d); // 1
 	cprintf("e thread_local f1 %ld\n", e); // 1 
 	cprintf("f thread_local f1 %ld\n", f); // 3
 	cprintf("g thread_local f1 %ld\n", g); // 3
 	cprintf("func1 b = %ld\n", b); // 6
-	jthread_setcpu(sys_getenvid(), 2);
-	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
-	cprintf("\nnumber cpu before sys in fun1 %d\n\n", fun1env->cpunum);
-	sys_yield();
-	cprintf("\nnumber cpu in fun1 %d\n\n", fun1env->cpunum);
-	cprintf("\nenvId in fun1 %d %d\n\n", sys_getenvid(), fun1env->env_id);
-	cprintf("\nnaffin mask %ld\n\n", fun1env->affinity_mask);
 	cprintf("a not thread_local in fun1 %d\n", a); // 7
-	cprintf("b thread_local in fun1 %ld\n", b);
 	while(i++ <= j) {
 		for(l = 0; l < 1000000; l++);
 		cprintf("I am in function 1: k = %d\n", k++);
@@ -91,9 +80,9 @@ void umain(int argc, char *argv[]) {
 	jthread_create(&t3, NULL, fun3, &repeat);
 	cprintf("calling join on t1\n");
 	int ret_join_error = jthread_join(t1, NULL);
-	cprintf("\njoin  error %d\n\n", ret_join_error); // 0
+	cprintf("join  error %d\n", ret_join_error); // 0
 	int ret_cancel_error = jthread_cancel(t2);
-	cprintf("\ncancel error %d\n\n", ret_cancel_error); 
+	cprintf("cancel error %d\n", ret_cancel_error); 
 	cprintf("calling join on t2\n");
 	jthread_join(t2, NULL);
 	cprintf("calling join on t3\n");
@@ -103,7 +92,7 @@ void umain(int argc, char *argv[]) {
 	cprintf("return_value: %ld\n", (uintptr_t)return_value);
 
 	ret_join_error = jthread_join(t1, NULL);
-	cprintf("\n%d\n\n", ret_join_error); // 0
+	cprintf("%d\n", ret_join_error); // 0
 
 	cprintf("a not thread_local %d\n", a); // 7
 	// must be same
@@ -116,3 +105,4 @@ void umain(int argc, char *argv[]) {
 	cprintf("error from create = %d\n", jthread_create(&t1, NULL, NULL, &repeat));
 	cprintf("errno = %d\n", errno);
 }
+

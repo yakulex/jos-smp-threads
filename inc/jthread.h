@@ -1,7 +1,3 @@
-// JOS Threading
-// Hugh O'Cinneide
-// November 2014
-
 #ifndef JOS_INC_JTHREAD_H
 #define JOS_INC_JTHREAD_H
 

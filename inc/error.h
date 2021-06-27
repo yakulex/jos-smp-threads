@@ -27,6 +27,8 @@ enum {
     E_FILE_EXISTS = 17, /* File already exists */
     E_NOT_EXEC = 18,    /* File not a valid executable */
     E_NOT_SUPP = 19,    /* Operation not supported */
+    E_NOT_IN_PROP_PROC = 20, /* Thread not in proper process */
+    E_NOT_ZOMB_OR_CANC = 21, /* Thread not zombie or cancelled */
     MAXERROR
 };
 

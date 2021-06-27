@@ -252,7 +252,7 @@ print_trapframe(struct Trapframe *tf) {
                 tf->tf_err & FEC_P ? "protection" : "not-present");
     } else
         cprintf("\n");
-
+    cprintf("  fs  0x%08lx\n", (unsigned long)tf->tf_fsbase);
     cprintf("  rip  0x%08lx\n", (unsigned long)tf->tf_rip);
     cprintf("  cs   0x----%04x\n", tf->tf_cs);
     cprintf("  flag 0x%08lx\n", (unsigned long)tf->tf_rflags);

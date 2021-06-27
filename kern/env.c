@@ -206,6 +206,8 @@ env_alloc(struct Env **newenv_store, envid_t parent_id, enum EnvType type) {
     /* Also clear the IPC receiving flag. */
     env->env_ipc_recving = 0;
 
+    // env->tls = NULL;
+
     // Clear out the threading variables
     env->env_child_thread = false;
     env->env_process_envid = env->env_id;
@@ -323,36 +325,74 @@ load_icode(struct Env *env, uint8_t *binary, size_t size) {
     struct Elf *elf = (struct Elf*)binary;
     struct Proghdr *ph = (struct Proghdr*)(binary + elf->e_phoff);
     if (elf->e_magic != ELF_MAGIC) {
-     cprintf("Unexpected ELF format\n");
-     return -E_INVALID_EXE;
+        cprintf("Unexpected ELF format\n");
+        return -E_INVALID_EXE;
     }
 
     //dump_page_table(env->address_space.pml4);
     switch_address_space(&env->address_space);
 
     for (size_t i = 0; i < elf->e_phnum; i++) {
-     if (ph[i].p_type == ELF_PROG_LOAD) {
-      void *src = binary + ph[i].p_offset;
-      void *dst = (void *)ph[i].p_va;
-      size_t filesz = ph[i].p_filesz;
-      size_t memsz = ph[i].p_memsz;
-      size_t safety_filesize = memsz - filesz;
-      size_t filesz2 = MIN(ph[i].p_filesz, memsz);
+        if (ph[i].p_type == ELF_PROG_LOAD) {
+            void *src = binary + ph[i].p_offset;
+            void *dst = (void *)ph[i].p_va;
+            size_t filesz = ph[i].p_filesz;
+            size_t memsz = ph[i].p_memsz;
+            size_t safety_filesize = memsz - filesz;
+            size_t filesz2 = MIN(ph[i].p_filesz, memsz);
 
-      if (safety_filesize < 0) {
-       cprintf("ph->p_filesz > ph->p_memsz\n");
-       return -E_INVALID_EXE;
-      } else {
-        map_region(&env->address_space, ROUNDDOWN((uintptr_t)dst, PAGE_SIZE), NULL, 0, ROUNDUP((uintptr_t)dst + memsz, PAGE_SIZE) - ROUNDDOWN((uintptr_t)dst, PAGE_SIZE), PROT_RWX | PROT_USER_ | ALLOC_ZERO); 
-        //cprintf("%d\n", res);
-        //region_maxref(&env->address_space, (uintptr_t)dst, memsz);
-       //cprintf("0x%08lX\n", ph[i].p_va);
-       //cprintf("%p\n", src);
-       //cprintf("%lu\n", filesz2);
-       memcpy(dst, src, filesz2);
-       memset((void*)ph[i].p_va + filesz2, 0, safety_filesize);
-      }
-     }
+            if (safety_filesize < 0) {
+                cprintf("ph->p_filesz > ph->p_memsz\n");
+                return -E_INVALID_EXE;
+            } else {
+                map_region(&env->address_space, ROUNDDOWN((uintptr_t)dst, PAGE_SIZE), NULL, 0, ROUNDUP((uintptr_t)dst + memsz, PAGE_SIZE) - ROUNDDOWN((uintptr_t)dst, PAGE_SIZE), PROT_RWX | PROT_USER_ | ALLOC_ZERO); 
+                //cprintf("%d\n", res);
+                //region_maxref(&env->address_space, (uintptr_t)dst, memsz);
+                // cprintf("0x%08lX\n", ph[i].p_va);
+                //cprintf("%p\n", src);
+                //cprintf("%lu\n", filesz2);
+                memcpy(dst, src, filesz2);
+                memset((void*)ph[i].p_va + filesz2, 0, safety_filesize);
+            }
+        } else if (ph[i].p_type == PT_TLS){
+            // cprintf("al size %d\n", *(int *)(binary + ph[i].p_offset));
+            // cprintf("al size %d\n", *(int *)(binary + ph[i].p_offset + 4));
+            // cprintf("al size %d\n", *(int *)(binary + ph[i].p_offset + 8));
+            // cprintf("al size %d\n", *(int *)(binary + ph[i].p_offset + 12));
+
+
+            void *master_tls_addr = (void *)MASTER_TLS_TOP - ph[i].p_memsz;
+            map_region(&env->address_space, ROUNDDOWN((uintptr_t)master_tls_addr, PAGE_SIZE), NULL, 0, MASTER_TLS_TOP - ROUNDDOWN((uintptr_t)master_tls_addr, PAGE_SIZE), PROT_R | PROT_W | PROT_USER_ | ALLOC_ZERO); 
+            
+            memcpy(master_tls_addr, binary + ph[i].p_offset, ph[i].p_filesz);
+            memset(master_tls_addr + ph[i].p_filesz, 0, ph[i].p_memsz - ph[i].p_filesz);
+
+            size_t tls_size = -(-ph[i].p_memsz & ~(ph[i].p_align-1));
+            size_t envtls_struct_offset = tls_size;
+            tls_size += -(-sizeof(struct EnvTLS) & ~(ph[i].p_align-1));
+
+            void *env_tls_addr = (void *)ROUNDDOWN((uintptr_t)master_tls_addr, PAGE_SIZE) - tls_size;
+            map_region(&env->address_space, ROUNDDOWN((uintptr_t)env_tls_addr, PAGE_SIZE), NULL, 0, ROUNDDOWN((uintptr_t)master_tls_addr, PAGE_SIZE) - ROUNDDOWN((uintptr_t)env_tls_addr, PAGE_SIZE), PROT_R | PROT_W | PROT_USER_ | ALLOC_ZERO); 
+
+            memcpy(env_tls_addr, binary + ph[i].p_offset, ph[i].p_filesz);
+            memset(env_tls_addr + ph[i].p_filesz, 0, ph[i].p_memsz - ph[i].p_filesz);
+
+            struct EnvTLS *env_tls = (struct EnvTLS *) (env_tls_addr + envtls_struct_offset);
+            env_tls->self = env_tls;
+            env_tls->tls_master_mmap = master_tls_addr;
+            env_tls->tls_master_size = ph[i].p_memsz;
+            env_tls->tls_master_align = ph[i].p_align;
+            env_tls->tls_mmap = env_tls_addr;
+            env_tls->tls_size = tls_size;
+
+            env->env_tls = env_tls;
+            env->env_tf.tf_fsbase = (uint64_t)env->env_tls;
+
+            // cprintf("master copy addr 0x%08llX\n", MASTER_TLS_TOP);
+            // cprintf("%p, %p\n", env_tls->tls_master_mmap, env_tls->tls_mmap);
+            // cprintf("tls segment, inited %lu, total %lu, align %lu, total aligned %lu, total size %lu\n", ph[i].p_filesz, ph[i].p_memsz, ph[i].p_align,  -(-ph[i].p_memsz & ~(ph[i].p_align-1)), tls_size);
+
+        }
     }
     switch_address_space(&kspace);
     env->env_tf.tf_rip = elf->e_entry;
@@ -478,25 +518,32 @@ _Noreturn void
 env_pop_tf(struct Trapframe *tf) {
      asm volatile(
             "movq %0, %%rsp\n"
-            "movq 0(%%rsp), %%r15\n"
-            "movq 8(%%rsp), %%r14\n"
-            "movq 16(%%rsp), %%r13\n"
-            "movq 24(%%rsp), %%r12\n"
-            "movq 32(%%rsp), %%r11\n"
-            "movq 40(%%rsp), %%r10\n"
-            "movq 48(%%rsp), %%r9\n"
-            "movq 56(%%rsp), %%r8\n"
-            "movq 64(%%rsp), %%rsi\n"
-            "movq 72(%%rsp), %%rdi\n"
-            "movq 80(%%rsp), %%rbp\n"
-            "movq 88(%%rsp), %%rdx\n"
-            "movq 96(%%rsp), %%rcx\n"
-            "movq 104(%%rsp), %%rbx\n"
-            "movq 112(%%rsp), %%rax\n"
-            "movw 120(%%rsp), %%es\n"
-            "movw 128(%%rsp), %%ds\n"
-            "addq $152,%%rsp\n" /* skip tf_trapno and tf_errcode */
-            "iretq" ::"g"(tf)
+
+            "movl %1, %%ecx\n"
+    
+            // EDX:EAX -> MSR[ECX]
+            "movl 0(%%rsp), %%eax\n"
+            "movl 4(%%rsp), %%edx\n"
+            "wrmsr\n"
+            "movq 8(%%rsp), %%r15\n"
+            "movq 16(%%rsp), %%r14\n"
+            "movq 24(%%rsp), %%r13\n"
+            "movq 32(%%rsp), %%r12\n"
+            "movq 40(%%rsp), %%r11\n"
+            "movq 48(%%rsp), %%r10\n"
+            "movq 56(%%rsp), %%r9\n"
+            "movq 64(%%rsp), %%r8\n"
+            "movq 72(%%rsp), %%rsi\n"
+            "movq 80(%%rsp), %%rdi\n"
+            "movq 88(%%rsp), %%rbp\n"
+            "movq 96(%%rsp), %%rdx\n"
+            "movq 104(%%rsp), %%rcx\n"
+            "movq 112(%%rsp), %%rbx\n"
+            "movq 120(%%rsp), %%rax\n"
+            "movw 128(%%rsp), %%es\n"
+            "movw 136(%%rsp), %%ds\n"
+            "addq $160,%%rsp\n" /* skip tf_trapno and tf_errcode */
+            "iretq" ::"g"(tf), "r" (FS_MSR)
             : "memory");
 
     /* Mostly to placate the compiler */

@@ -129,7 +129,10 @@ KERN_BINFILES :=	user/hello \
 			user/test \
 			user/lock \
 			user/icode \
-			user/threadcreate
+			user/threadcreate \
+			user/testthread \
+			user/testtls \
+			user/testbinding
 
 KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
 endif

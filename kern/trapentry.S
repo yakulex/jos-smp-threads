@@ -70,6 +70,17 @@ _alltraps:
   movw %ds,8(%rsp)
   movw %es,(%rsp)
   PUSHA
+  subq $8,%rsp
+
+  movl $FS_MSR, %ecx
+    
+    # EDX:EAX <- MSR[ECX]
+    
+  rdmsr
+
+  movl %eax,0(%rsp) # fs
+  movl %edx,4(%rsp)
+
   movl $GD_KD,%eax
   movw %ax,%ds
   movw %ax,%es
