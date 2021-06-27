@@ -321,20 +321,12 @@ make clean
 endef
 export POST_CHECKOUT
 
-define PRE_COMMIT
-#!/bin/sh
 
-
-endef
-export PRE_COMMIT
 
 .git/hooks/post-checkout:
 	@echo "$$POST_CHECKOUT" > $@
 	@chmod +x $@
 
-.git/hooks/pre-commit:
-	@echo "$$PRE_COMMIT" > $@
-	@chmod +x $@
 
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
