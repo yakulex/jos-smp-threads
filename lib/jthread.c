@@ -72,7 +72,7 @@ int
 jthread_mutex_lock(jthread_mutex_t *mutex)
 {
   while (xchg((uint32_t *)&mutex->locked, 1) != 0)
-    asm volatile ("pause");
+    sys_yield();
   mutex->owner = envs[ENVX(sys_getenvid())].env_id;
   return 0;
 }

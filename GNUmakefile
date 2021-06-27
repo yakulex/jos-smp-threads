@@ -253,7 +253,7 @@ ULDFLAGS := -T user/user.ld --warn-common
 OBJDIRS :=
 
 # Make sure that 'all' is the first target
-all: .git/hooks/post-checkout .git/hooks/pre-commit
+all: .git/hooks/post-checkout
 
 # Eliminate default suffix rules
 .SUFFIXES:
