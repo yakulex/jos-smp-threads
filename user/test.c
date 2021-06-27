@@ -90,8 +90,10 @@ void umain(int argc, char *argv[]) {
 	cprintf("creating thread 3\n");
 	jthread_create(&t3, NULL, fun3, &repeat);
 	cprintf("calling join on t1\n");
-	jthread_join(t1, NULL);
-	jthread_cancel(t2);
+	int ret_join_error = jthread_join(t1, NULL);
+	cprintf("\njoin  error %d\n\n", ret_join_error); // 0
+	int ret_cancel_error = jthread_cancel(t2);
+	cprintf("\ncancel error %d\n\n", ret_cancel_error); 
 	cprintf("calling join on t2\n");
 	jthread_join(t2, NULL);
 	cprintf("calling join on t3\n");
@@ -99,6 +101,10 @@ void umain(int argc, char *argv[]) {
 	cprintf("calling join on t4\n");
 	jthread_join(t4, NULL);
 	cprintf("return_value: %ld\n", (uintptr_t)return_value);
+
+	ret_join_error = jthread_join(t1, NULL);
+	cprintf("\n%d\n\n", ret_join_error); // 0
+
 	cprintf("a not thread_local %d\n", a); // 7
 	// must be same
 	cprintf("b thread_local %ld\n", b);

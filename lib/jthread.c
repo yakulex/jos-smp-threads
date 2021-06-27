@@ -39,9 +39,12 @@ int
 jthread_join(jthread_t th, void **thread_return)
 {
   int ret = 0;
-  while ((ret = sys_kthread_join(th, thread_return)) < 0) // better check error code and return with error if code is too bad
+  while ((ret = sys_kthread_join(th, thread_return)) < 0) 
   {
-    sys_yield();
+    errno = -ret;
+    if ((errno == E_NOT_IN_PROP_PROC || errno == E_NOT_ZOMB_OR_CANC))
+      sys_yield();
+    else return ret;
   }
   return 0;
 }
@@ -54,19 +57,14 @@ jthread_exit(void *retval)
 
 int 
 jthread_cancel(jthread_t thread){
-  int ret = 0;
-  while ((ret = sys_kthread_cancel(thread)) < 0)
-  {
-    sys_yield();
-  }
-  return 0;
+  int ret = sys_kthread_cancel(thread);
+  return errno = -ret, ret;
 }
 
 int 
 jthread_setcpu(jthread_t thread, int cpunum){
-  int ret = 0;
-  ret = sys_kthread_setaffinity(thread, 1ULL << cpunum);
-  return ret;
+  int ret = sys_kthread_setaffinity(thread, 1ULL << cpunum);
+  return errno = -ret, ret;
 }
 
 
@@ -83,7 +81,7 @@ int
 jthread_mutex_trylock(jthread_mutex_t *mutex)
 {
   if (xchg((uint32_t *)&mutex->locked, 1) != 0)
-    return -1;
+    return errno = E_UNSPECIFIED, -E_UNSPECIFIED;
   return 0;
 }
 

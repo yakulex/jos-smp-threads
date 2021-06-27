@@ -601,13 +601,16 @@ sys_kthread_join(jthread_t tid, void **retstore)
   int ret;
   if ((ret = envid2env(tid, &e, 0)) < 0)
     return ret;
+  if (e->env_thread_status == THREAD_DONE) {
+    return -E_BAD_ENV;
+  }
   if (e->env_thread_status != THREAD_ZOMBIE && e->env_thread_status != THREAD_CANCELLED){
-    return -1;
+    return -E_NOT_ZOMB_OR_CANC;
   }
     
   // Check that we have permission to reap this thread
   if (e->env_process_envid != curenv->env_process_envid){
-    return -1;
+    return -E_NOT_IN_PROP_PROC;
   }
 
   // set retval
@@ -641,29 +644,22 @@ sys_kthread_exit(void *retval)
 }
 
 static int 
-sys_kthread_cancel(jthread_t tid){
+sys_kthread_cancel(jthread_t tid) {
     if (DEBUGTHREAD)
         cprintf("In jthread_cancel\n");
     struct Env *e;
     int ret;
     if ((ret = envid2env(tid, &e, 0)) < 0)
         return ret;
-    
-    // Check that we have permission to reap this thread
-    if (e->env_process_envid != curenv->env_process_envid){
-        return -1;
-    }
 
     // Mark the env as CANCELED
-    if (e->env_child_thread){
+    if (e->env_child_thread && e->env_process_envid == curenv->env_process_envid) {
 
         e->env_thread_status = THREAD_CANCELLED;
         e->env_thread_retval = NULL;
         e->env_status = ENV_NOT_RUNNABLE;
 
-    } else {
-        env_destroy(e);
-    }
+    } else return -E_BAD_ENV;
 
     return 0;
 }
@@ -679,11 +675,11 @@ sys_kthread_setaffinity(jthread_t tid, uint64_t mask) {
     
     // Check that we have permission to reap this thread
     if (e->env_process_envid != curenv->env_process_envid) {
-        return -1;
+        return -E_NOT_IN_PROP_PROC;
     }
 
     if (!(-1ULL >> (64 - ncpu) & mask)) {
-        return -1;
+        return -E_INVAL;
     }
 
      e->affinity_mask = mask;
