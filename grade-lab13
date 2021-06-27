@@ -10,7 +10,7 @@ r = Runner(save("jos.out"),
 
 @test(0)
 def test_do_nothing():
-    r.user_test("lock")
+    r.user_test("lock", make_args=["CPUS=4"])
 
 
 def E(s, trim=False):
@@ -23,7 +23,7 @@ def E(s, trim=False):
 
 @test(8)
 def test_dumbfork():
-    r.user_test("dumbfork")
+    r.user_test("dumbfork", make_args=["CPUS=4"])
     r.match(E(".00000000. new env $E1"),
             E(".$E1. new env $E2"),
             "0: I am the parent.",
@@ -40,7 +40,7 @@ end_part("A")
 
 @test(6)
 def test_faultread():
-    r.user_test("faultread")
+    r.user_test("faultread", make_args=["CPUS=4"])
     r.match("<0x80........> Page fault ip=[0-9A-F]+ va=00000000 err=-U--- -> fault",
             E(".$E1. user_mem_check assertion failure for va.0000007fffff.... ip.000000000080...."),
             E(".$E1. free env $E1"),
@@ -48,21 +48,21 @@ def test_faultread():
 
 @test(6)
 def test_faultwrite():
-    r.user_test("faultwrite")
+    r.user_test("faultwrite", make_args=["CPUS=4"])
     r.match("<0x80........> Page fault ip=[0-9A-F]+ va=00000000 err=-UW-- -> fault",
             E(".$E1. user_mem_check assertion failure for va.0000007fffff.... ip.000000000080...."),
             E(".$E1. free env $E1"))
 
 @test(8)
 def test_faultdie():
-    r.user_test("faultdie")
+    r.user_test("faultdie", make_args=["CPUS=4"])
     r.match("i faulted at va deadbeef, err 6",
             E(".$E1. exiting gracefully"),
             E(".$E1. free env $E1"))
 
 @test(8)
 def test_faultalloc():
-    r.user_test("faultalloc")
+    r.user_test("faultalloc", make_args=["CPUS=4"])
     r.match("fault beefdead",
             "this string was faulted in at beefdead",
             "fault cafebffe",
@@ -79,25 +79,25 @@ def test_faultallocbad():
 
 @test(8)
 def test_faultnostack():
-    r.user_test("faultnostack")
+    r.user_test("faultnostack", make_args=["CPUS=4"])
     r.match(E(".$E1. user_mem_check assertion failure for va.0000007fffff.... ip.000000000080...."),
             E(".$E1. free env $E1"))
 
 @test(8)
 def test_faultbadhandler():
-    r.user_test("faultbadhandler")
+    r.user_test("faultbadhandler", make_args=["CPUS=4"])
     r.match(E(".$E1. user_mem_check assertion failure for va.0000007fffff.... ip.00000000deadbeef"),
             E(".$E1. free env $E1"))
 
 @test(8)
 def test_faultevilhandler():
-    r.user_test("faultevilhandler")
+    r.user_test("faultevilhandler", make_args=["CPUS=4"])
     r.match(E(".$E1. user_mem_check assertion failure for va.0000007fffff.... ip.00000000f0100020"),
             E(".$E1. free env $E1"))
 
 @test(8)
 def test_forktree():
-    r.user_test("forktree", timeout=120)
+    r.user_test("forktree", timeout=120, make_args=["CPUS=4"])
     r.match("....: I am .0.",
             "....: I am .1.",
             "....: I am .000.",
@@ -115,7 +115,7 @@ end_part("B")
 
 @test(8)
 def test_spin():
-    r.user_test("spin", timeout=200)
+    r.user_test("spin", timeout=200, make_args=["CPUS=4"])
     r.match(E(".00000000. new env $E1"),
             "I am the parent.  Forking the child...",
             E(".$E1. new env $E2"),
