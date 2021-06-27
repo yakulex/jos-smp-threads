@@ -21,14 +21,14 @@
 #define trace_memory_more 0
 #endif
 
-#if LAB == 9 || LAB == 8
+#if LAB == 9 || LAB == 8 || LAB == 13
 #undef trace_pagefaults
 #define trace_pagefaults 1
 #elif !defined(trace_pagefaults)
 #define trace_pagefaults 0
 #endif
 
-#if LAB == 9 || LAB == 8 || LAB == 3
+#if LAB == 9 || LAB == 8 || LAB == 3 || LAB == 13
 #undef trace_envs
 #define trace_envs 1
 #elif !defined(trace_envs)
