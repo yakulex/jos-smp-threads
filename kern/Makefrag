@@ -128,7 +128,10 @@ KERN_BINFILES :=	user/hello \
 			user/signedoverflow \
 			user/test \
 			user/lock \
-			user/icode
+			user/icode \
+			user/testthread \
+			user/testtls \
+			user/testbinding
 KERN_BINFILES := $(patsubst %, $(OBJDIR)/%, $(KERN_BINFILES))
 endif
 
